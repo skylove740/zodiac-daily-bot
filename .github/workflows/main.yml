@@ -28,9 +28,5 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Restore token.json from secret
-        run: |
-          echo "${{ secrets.TOKEN_JSON_BASE64 }}" | base64 -d > token.json
-
       - name: Run bot script
         run: python zodiac_daily_bot.py
