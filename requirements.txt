@@ -1,0 +1,7 @@
+openai
+Pillow
+requests
+python-dotenv
+apscheduler
+flask
+Pillow>=10.0
