@@ -430,14 +430,14 @@ def upload_video_to_youtube(video_path):
 
 def run_daily_pipeline():
     print("🚀 띠별 운세 생성 시작")
-    # create_intro_image()  # 맨 앞장 이미지 생성
-    # generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
+    create_intro_image()  # 맨 앞장 이미지 생성
+    generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
 
-    # fortunes = get_daily_fortunes()
+    fortunes = get_daily_fortunes()
     for zodiac in ZODIACS:
-        # text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
-        # text = clean_fortune_text(text)
-        # insert_fortune_text(zodiac, text)
+        text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
+        text = clean_fortune_text(text)
+        insert_fortune_text(zodiac, text)
         image_path = os.path.join(OUT_DIR, f"{zodiac}_운세.png")
         generated_images.append(image_path)
 
