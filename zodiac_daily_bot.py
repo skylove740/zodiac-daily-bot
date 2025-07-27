@@ -29,7 +29,7 @@ IG_ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN")
 IG_USER_ID = os.environ.get("IG_USER_ID")
 
 ZODIACS = ["쥐", "소", "호랑이", "토끼", "용", "뱀", "말", "양", "원숭이", "닭", "개", "돼지"]
-BASE_DIR = "zodiac_daily_pipeline"
+BASE_DIR = "zodiac-daily-bot"
 BG_DIR = os.path.join(BASE_DIR, "backgrounds")
 OUT_DIR = os.path.join(BASE_DIR, "results")
 # BG_DIR = "backgrounds"
