@@ -1,6 +1,7 @@
 # zodiac_daily_bot.py
 
 import os
+import base64
 import openai
 from openai import OpenAI
 import requests
@@ -15,6 +16,7 @@ from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from pytz import timezone
 
 load_dotenv()
 
@@ -26,26 +28,24 @@ timestamps = {}
 IG_ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN")
 IG_USER_ID = os.environ.get("IG_USER_ID")
 
-
 ZODIACS = ["쥐", "소", "호랑이", "토끼", "용", "뱀", "말", "양", "원숭이", "닭", "개", "돼지"]
 BASE_DIR = "zodiac_daily_pipeline"
 BG_DIR = os.path.join(BASE_DIR, "backgrounds")
 OUT_DIR = os.path.join(BASE_DIR, "results")
+# BG_DIR = "backgrounds"
+# OUT_DIR = "results"
 FONT_PATH = os.path.join(BASE_DIR, "fonts", "나눔손글씨 느릿느릿체.ttf")
 FONT_SIZE = 90
-TEXT_BOX = (190, 700, 830, 1500) # (x1, y1, x2, y2) 좌표
+TEXT_BOX = (190, 700, 830, 1500)  # (x1, y1, x2, y2) 좌표
 
 os.makedirs(BG_DIR, exist_ok=True)
 os.makedirs(OUT_DIR, exist_ok=True)
 
+
 # ========== 운세 생성 ==========
 def clean_fortune_text(text):
     # 1. "쥐띠", "말띠", "호랑이띠" 등 띠 이름 제거 (문장 시작 위치에만)
-    text = re.sub(
-        r'^[^가-힣]*([가-힣]{1,5}띠)[\\s:：,.~!\\-]*', 
-        '', 
-        text
-    )
+    text = re.sub(r'^[^가-힣]*([가-힣]{1,5}띠)[\\s:：,.~!\\-]*', '', text)
 
     # 2. 이모지 제거
     emoji_pattern = re.compile(
@@ -65,9 +65,9 @@ def clean_fortune_text(text):
         "\u25fb-\u25fe"
         "\u2614-\u2615"
         "]+",
-        flags=re.UNICODE
-    )
+        flags=re.UNICODE)
     return emoji_pattern.sub(r'', text).strip()
+
 
 def get_daily_fortunes():
     client = OpenAI()
@@ -76,25 +76,25 @@ def get_daily_fortunes():
         "오늘 날짜의 12띠별 운세를 각각 한 문단으로 써줘. 띠 순서는 다음과 같아:\n" + ", ".join(ZODIACS) +
         "\n12개 띠를 하나도 빼놓지 말고 한 문단씩 써줘야해.\n말투는 감성적이고 따뜻하며 유튜브 쇼츠에 잘 어울리는 스타일이면 좋아.\n각 띠별 운세를 줄바꿈으로 문단을 확실히 나눠줘. 예시는 다음과 같아.\n"
         + """
-        🐭 쥐띠
-        작은 선택이 큰 변화를 가져올 수 있는 하루예요. 망설이지 말고 마음 가는 길을 따라가 보세요. 오늘의 당신은 충분히 멋져요.
+🐭 쥐띠
+ 작은 선택이 큰 변화를 가져올 수 있는 하루예요. 망설이지 말고 마음 가는 길을 따라가 보세요. 오늘의 당신은 충분히 멋져요.
 
-        🐮 소띠
-        느긋함 속에 여유가 피어나는 날이에요. 조급해하지 말고, 지금 이 순간을 천천히 음미해보세요. 좋은 일이 다가오고 있어요.
+ 🐮 소띠
+느긋함 속에 여유가 피어나는 날이에요. 조급해하지 말고, 지금 이 순간을 천천히 음미해보세요. 좋은 일이 다가오고 있어요.
 
-        🐯 호랑이띠
-        에너지가 넘치는 하루예요. 새로운 도전 앞에서도 두려움보다는 설렘이 더 클 거예요. 오늘의 당신, 무서울 게 없어요.
+🐯 호랑이띠
+에너지가 넘치는 하루예요. 새로운 도전 앞에서도 두려움보다는 설렘이 더 클 거예요. 오늘의 당신, 무서울 게 없어요.
 
-        ...
+...
 
-        이렇게 띠별로 한 문단씩 12개 띠 운세를 모두 줘.
-        """
-    )
-    res = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.85
-    )
+이렇게 띠별로 한 문단씩 12개 띠 운세를 모두 줘.
+""")
+    res = client.chat.completions.create(model="gpt-3.5-turbo",
+                                         messages=[{
+                                             "role": "user",
+                                             "content": prompt
+                                         }],
+                                         temperature=0.85)
     text = res.choices[0].message.content.strip()
     print("GPT 운세 생성 결과:\n", text)
 
@@ -138,6 +138,7 @@ def get_daily_fortunes():
     fortunes = dict(zip(ZODIACS, text.split("\n\n")))
     return fortunes
 
+
 # 이미지 영역에 맞춰 줄바꿈
 def wrap_text(text, font, max_width):
     """
@@ -161,6 +162,7 @@ def wrap_text(text, font, max_width):
 
     return lines
 
+
 # 첫 페이지 생성용
 def create_intro_image():
     from datetime import datetime
@@ -180,7 +182,6 @@ def create_intro_image():
 
     LINE_SPACING = int(FONT_SIZE * 1.4)
 
-    
     text_size = draw.textbbox((x, y), line1, font=font, anchor="mm")
     text_w = text_size[2] - text_size[0]
     text_h = text_size[3] - text_size[1]
@@ -189,9 +190,9 @@ def create_intro_image():
     box_padding = 10
     box_coords = [
         x - text_w // 2 - box_padding,
-        y - (text_h*2) // 2 - box_padding,
+        y - (text_h * 2) // 2 - box_padding,
         x + text_w // 2 + box_padding,
-        y + (text_h*2) // 2 + box_padding,
+        y + (text_h * 2) // 2 + box_padding,
     ]
     box_color = (75, 75, 75, 150)  # 반투명 회색
     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
@@ -200,16 +201,39 @@ def create_intro_image():
     image = Image.alpha_composite(image, overlay)
 
     # 텍스트 그리기
-    draw = ImageDraw.Draw(image)  # 다시 draw 객체 재생성    
+    draw = ImageDraw.Draw(image)  # 다시 draw 객체 재생성
 
-    draw.text((x, y - LINE_SPACING//2), line1, font=font, fill="black", anchor="mm", stroke_width=4, stroke_fill="black")
-    draw.text((x, y - LINE_SPACING//2), line1, font=font, fill="white", anchor="mm", stroke_width=2)
+    draw.text((x, y - LINE_SPACING // 2),
+              line1,
+              font=font,
+              fill="black",
+              anchor="mm",
+              stroke_width=4,
+              stroke_fill="black")
+    draw.text((x, y - LINE_SPACING // 2),
+              line1,
+              font=font,
+              fill="white",
+              anchor="mm",
+              stroke_width=2)
 
-    draw.text((x, y + LINE_SPACING//2), line2, font=font, fill="black", anchor="mm", stroke_width=4, stroke_fill="black")
-    draw.text((x, y + LINE_SPACING//2), line2, font=font, fill="white", anchor="mm", stroke_width=2)
+    draw.text((x, y + LINE_SPACING // 2),
+              line2,
+              font=font,
+              fill="black",
+              anchor="mm",
+              stroke_width=4,
+              stroke_fill="black")
+    draw.text((x, y + LINE_SPACING // 2),
+              line2,
+              font=font,
+              fill="white",
+              anchor="mm",
+              stroke_width=2)
 
     out_path = os.path.join(OUT_DIR, "0_intro.png")
     image.save(out_path)
+
 
 # ========== 이미지에 텍스트 삽입 ==========
 def insert_fortune_text(zodiac, text):
@@ -220,7 +244,6 @@ def insert_fortune_text(zodiac, text):
         img = Image.open(image_path).convert("RGBA")
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
-        
 
         x1, y1, x2, y2 = TEXT_BOX
         max_width = x2 - x1
@@ -267,8 +290,14 @@ def insert_fortune_text(zodiac, text):
 
             # 텍스트 그리기
             draw = ImageDraw.Draw(img)  # 다시 draw 객체 재생성
-            
-            draw.text((x, y), l, font=font, fill="black", anchor="mm", stroke_width=2, stroke_fill="black")
+
+            draw.text((x, y),
+                      l,
+                      font=font,
+                      fill="black",
+                      anchor="mm",
+                      stroke_width=2,
+                      stroke_fill="black")
             draw.text((x, y), l, font=font, fill="white", anchor="mm")
 
         img.save(output_path)
@@ -278,7 +307,10 @@ def insert_fortune_text(zodiac, text):
 
 
 # 영상으로 변환
-def generate_zodiac_video(image_paths, out_path, duration_per_image=2.5, bgm_path=None):
+def generate_zodiac_video(image_paths,
+                          out_path,
+                          duration_per_image=2.5,
+                          bgm_path=None):
     """
     image_paths: 운세 이미지 경로 리스트
     out_path: 저장될 mp4 경로
@@ -286,9 +318,10 @@ def generate_zodiac_video(image_paths, out_path, duration_per_image=2.5, bgm_pat
     bgm_path: 배경음악 mp3 경로 (선택)
     """
     clips = []
-    
+
     for image_path in image_paths:
-        clip = ImageClip(image_path, duration=duration_per_image).resize(height=1920).set_position("center")
+        clip = ImageClip(image_path, duration=duration_per_image).resize(
+            height=1920).set_position("center")
         clips.append(clip)
 
     final_clip = concatenate_videoclips(clips, method="compose")
@@ -297,17 +330,23 @@ def generate_zodiac_video(image_paths, out_path, duration_per_image=2.5, bgm_pat
         audio = AudioFileClip(bgm_path).subclip(0, final_clip.duration)
         final_clip = final_clip.set_audio(audio)
 
-    final_clip.write_videofile(out_path, fps=30, codec="libx264", audio_codec="aac")
+    final_clip.write_videofile(out_path,
+                               fps=30,
+                               codec="libx264",
+                               audio_codec="aac")
+
 
 def create_daily_video_from_images():
     global timestamps
     date_str = datetime.now().strftime("%Y%m%d")
-    image_files = [
-        "0_intro.png"
-    ] + [f"{z}_운세.png" for z in ZODIACS] + ["end_img.png"]  # 🔧 여기 수정됨
+    image_files = ["0_intro.png"] + [f"{z}_운세.png" for z in ZODIACS
+                                     ] + ["end_img.png"]  # 🔧 여기 수정됨
 
-    image_paths = [os.path.join(OUT_DIR, f) for f in image_files if os.path.exists(os.path.join(OUT_DIR, f))]
-    
+    image_paths = [
+        os.path.join(OUT_DIR, f) for f in image_files
+        if os.path.exists(os.path.join(OUT_DIR, f))
+    ]
+
     video_out_path = os.path.join(OUT_DIR, f"{date_str}_zodiac_video.mp4")
 
     bgm_path = os.path.join(BASE_DIR, "bgm", "bgm.mp3")
@@ -324,10 +363,12 @@ def create_daily_video_from_images():
         timestamps[zodiac] = f"{minutes:02d}:{seconds:02d}"
         start_time += duration_per_image
 
-    generate_zodiac_video(image_paths, video_out_path, duration_per_image=duration_per_image, bgm_path=bgm_path)
+    generate_zodiac_video(image_paths,
+                          video_out_path,
+                          duration_per_image=duration_per_image,
+                          bgm_path=bgm_path)
     print(f"🎥 영상 생성 완료: {video_out_path}")
     return video_out_path
-
 
 
 generated_images = []
@@ -336,19 +377,20 @@ generated_images = []
 # ============================ 유튭 업로드 ===========================
 def upload_video_to_youtube(video_path):
     global timestamps
-    creds = Credentials.from_authorized_user_file("zodiac_daily_pipeline/token.json", YOUTUBE_SCOPES)
+    creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
     youtube = build("youtube", "v3", credentials=creds)
 
     now = datetime.now()
     date_str = now.strftime("%Y년 %m월 %d일")
 
-    timestamp_description = "\n".join([f"🐾 {name}띠 운세 : {time}" for name, time in timestamps.items()])
-
+    timestamp_description = "\n".join(
+        [f"🐾 {name}띠 운세 : {time}" for name, time in timestamps.items()])
 
     body = {
         "snippet": {
             "title": f"{date_str} 띠별 운세 ✨",  # 영상 제목
-            "description": f"{date_str} 오늘의 띠별 운세입니다.\n\n{timestamp_description}\n\n#운세 #띠별운세 #shorts",
+            "description":
+            f"{date_str} 오늘의 띠별 운세입니다.\n\n{timestamp_description}\n\n#운세 #띠별운세 #shorts",
             "tags": ["운세", "띠별운세", "오늘의운세", "shorts"],
             "categoryId": "22"  # People & Blogs
         },
@@ -357,10 +399,15 @@ def upload_video_to_youtube(video_path):
         }
     }
 
-    media = MediaFileUpload(video_path, chunksize=-1, resumable=True, mimetype="video/*")
+    media = MediaFileUpload(video_path,
+                            chunksize=-1,
+                            resumable=True,
+                            mimetype="video/*")
 
     print("📤 유튜브 업로드 시작...")
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+    request = youtube.videos().insert(part="snippet,status",
+                                      body=body,
+                                      media_body=media)
     response = None
 
     while response is None:
@@ -370,8 +417,30 @@ def upload_video_to_youtube(video_path):
 
     print(f"✅ 업로드 완료! YouTube Video ID: {response.get('id')}")
 
+    # token.json 삭제
+    try:
+        os.remove("token.json")
+        print("token.json 파일 삭제 완료.")
+    except FileNotFoundError:
+        print("token.json 파일이 이미 존재하지 않음.")
+    except Exception as e:
+        print(f"token.json 삭제 중 오류 발생: {e}")
+
 
 def run_daily_pipeline():
+    # base64 문자열 가져오기
+    token_b64 = os.getenv("TOKEN_JSON_B64")
+    with open("token.json", "wb") as f:
+        f.write(base64.b64decode(token_b64))
+
+    # 디코딩 후 token.json로 저장
+    if token_b64:
+        with open("token.json", "wb") as f:
+            f.write(base64.b64decode(token_b64))
+        print("token.json 파일 복원 완료.")
+    else:
+        print("TOKEN_JSON_B64 환경변수가 설정되지 않았습니다.")
+
     print("🚀 띠별 운세 생성 시작")
     create_intro_image()  # 맨 앞장 이미지 생성
     generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
@@ -398,18 +467,23 @@ def run_daily_pipeline():
 
 
 # ========== 스케줄러 설정 ==========
-# scheduler = BackgroundScheduler()
+# seoul_tz = timezone('Asia/Seoul')
+
+# scheduler = BackgroundScheduler(timezone=seoul_tz)
 # scheduler.add_job(run_daily_pipeline, 'cron', hour=8, minute=0)
 # scheduler.start()
 
 # ========== Flask 웹서버 for UptimeRobot ==========
 # app = Flask(__name__)
 
+
 # @app.route("/")
 # def home():
 #     return "✅ Zodiac bot is alive!"
 
+
 if __name__ == "__main__":
+
     run_daily_pipeline()  # 수동 실행도 가능
     # scheduler.start()
     # app.run(host="0.0.0.0", port=8080)
