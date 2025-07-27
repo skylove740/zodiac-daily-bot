@@ -429,6 +429,27 @@ def upload_video_to_youtube(video_path):
 
 
 def run_daily_pipeline():
+    print("🚀 띠별 운세 생성 시작")
+    # create_intro_image()  # 맨 앞장 이미지 생성
+    # generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
+
+    # fortunes = get_daily_fortunes()
+    for zodiac in ZODIACS:
+        # text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
+        # text = clean_fortune_text(text)
+        # insert_fortune_text(zodiac, text)
+        image_path = os.path.join(OUT_DIR, f"{zodiac}_운세.png")
+        generated_images.append(image_path)
+
+    follow_image = os.path.join(BG_DIR, "follow_prompt.png")
+    if os.path.exists(follow_image):
+        generated_images.append(follow_image)
+
+    print("✅ 전체 이미지 생성 완료")
+
+    # 🎬 여기서 영상으로 변환!
+    video_path = create_daily_video_from_images()
+
     # base64 문자열 가져오기
     token_b64 = os.getenv("TOKEN_JSON_BASE64")
     with open("token.json", "wb") as f:
@@ -441,27 +462,6 @@ def run_daily_pipeline():
         print("token.json 파일 복원 완료.")
     else:
         print("TOKEN_JSON_BASE64 환경변수가 설정되지 않았습니다.")
-
-    print("🚀 띠별 운세 생성 시작")
-    create_intro_image()  # 맨 앞장 이미지 생성
-    generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
-
-    fortunes = get_daily_fortunes()
-    for zodiac in ZODIACS:
-        text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
-        text = clean_fortune_text(text)
-        insert_fortune_text(zodiac, text)
-        image_path = os.path.join(OUT_DIR, f"{zodiac}_운세.png")
-        generated_images.append(image_path)
-
-    follow_image = os.path.join(BG_DIR, "follow_prompt.png")
-    if os.path.exists(follow_image):
-        generated_images.append(follow_image)
-
-    print("✅ 전체 이미지 생성 완료")
-
-    # 🎬 여기서 영상으로 변환!
-    video_path = create_daily_video_from_images()
 
     # ⏭️ 다음 단계: YouTube 업로드
     upload_video_to_youtube(video_path)
