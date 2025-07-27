@@ -430,7 +430,7 @@ def upload_video_to_youtube(video_path):
 
 def run_daily_pipeline():
     # base64 문자열 가져오기
-    token_b64 = os.getenv("TOKEN_JSON_B64")
+    token_b64 = os.getenv("TOKEN_JSON_BASE64")
     with open("token.json", "wb") as f:
         f.write(base64.b64decode(token_b64))
 
@@ -440,7 +440,7 @@ def run_daily_pipeline():
             f.write(base64.b64decode(token_b64))
         print("token.json 파일 복원 완료.")
     else:
-        print("TOKEN_JSON_B64 환경변수가 설정되지 않았습니다.")
+        print("TOKEN_JSON_BASE64 환경변수가 설정되지 않았습니다.")
 
     print("🚀 띠별 운세 생성 시작")
     create_intro_image()  # 맨 앞장 이미지 생성
