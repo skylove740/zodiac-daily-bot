@@ -17,6 +17,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from pytz import timezone
+from zoneinfo import ZoneInfo
 
 load_dotenv()
 
@@ -266,7 +267,7 @@ def wrap_text(text, font, max_width):
 def create_intro_image():
     from datetime import datetime
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = f"{now.year}. {now.month}. {now.day}"  # ex: 2025. 7. 10
     line1 = f"{date_str}"
     line2 = "띠별 운세"
@@ -410,7 +411,7 @@ def insert_fortune_text(zodiac, text):
 def create_star_intro_image():
     from datetime import datetime
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = f"{now.year}. {now.month}. {now.day}"  # ex: 2025. 7. 10
     line1 = f"{date_str}"
     line2 = "별자리 운세"
@@ -585,7 +586,7 @@ def generate_zodiac_video(image_paths,
 
 def create_daily_video_from_images():
     global timestamps
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y%m%d")
     image_files = ["0_intro.png"] + [f"{z}_운세.png" for z in ZODIACS
                                      ] + ["end_img.png"]  # 🔧 여기 수정됨
 
@@ -627,7 +628,7 @@ def upload_video_to_youtube(video_path):
     creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
     youtube = build("youtube", "v3", credentials=creds)
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = now.strftime("%Y년 %m월 %d일")
 
     timestamp_description = "\n".join(
@@ -719,7 +720,7 @@ def run_daily_pipeline():
 
 def create_daily_video_from_images_star():
     global timestamps
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y%m%d")
     image_files = ["0_intro.png"] + [f"{z}자리_운세.png" for z in ZODIACS_star
                                      ] + ["end_img.png"]  # 🔧 여기 수정됨
 
@@ -761,7 +762,7 @@ def upload_video_to_youtube_star(video_path):
     creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
     youtube = build("youtube", "v3", credentials=creds)
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = now.strftime("%Y년 %m월 %d일")
 
     timestamp_description = "\n".join(
