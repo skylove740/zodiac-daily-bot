@@ -15,4 +15,3 @@ pytz
 feedparser
 newsdataapi
 bs4
-textwrap
