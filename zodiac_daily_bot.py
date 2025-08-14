@@ -162,7 +162,7 @@ def get_news_from_html():
     print("\n=== 못 찾은 source_name 목록 ===")
     for s in sorted(unknown_sources):
         print("-", s)
-        print("soruce url : ", source_map.get(s, {}).get("url", "N/A"))
+        print("soruce url : ", source_map.get(s, {}).get("source_url", "N/A"))
 
     return collected_articles
 
@@ -301,9 +301,9 @@ def draw_text_with_box(draw, text, position, font, text_color, box_color, outlin
     draw.text(position, text, font=font, fill=text_color)
 
 # ===== 인트로 이미지 생성 =====
-def create_intro_image_news():
+def create_intro_image_news(target_en, target_kr):
     date_str = datetime.now().strftime("%Y.%m.%d")
-    lines = [date_str, "테슬라 관련", "경제 뉴스"]
+    lines = [date_str, target_kr, "관련 뉴스"]
 
     img = Image.open(INTRO_BG).convert("RGBA")
     W, H = img.size
@@ -409,7 +409,7 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
 
 
 # ============================ 유튭 업로드 ===========================
-def upload_video_to_youtube_news(video_path):
+def upload_video_to_youtube_news(video_path, target_kr):
     global timestamps
     creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
     youtube = build("youtube", "v3", credentials=creds)
@@ -419,10 +419,10 @@ def upload_video_to_youtube_news(video_path):
 
     body = {
         "snippet": {
-            "title": f"{date_str} 테슬라 관련 경제 뉴스",  # 영상 제목
+            "title": f"{date_str} "+target_kr+" 관련 경제 뉴스",  # 영상 제목
             "description":
-            f"{date_str} 오늘의 테슬라 관련 경제 뉴스 요약입니다.\n\n#뉴스요약 #테슬라 #테슬라뉴스 #오늘의테슬라 #뉴스 #shorts",
-            "tags": ["뉴스", "뉴스요약", "테슬라", "테슬라뉴스", "오늘의테슬라", "shorts"],
+            f"{date_str} 오늘의 "+target_kr+" 관련 경제 뉴스 요약입니다.\n\n#뉴스요약 #"+target_kr+" #"+target_kr+"뉴스 #오늘의"+target_kr+" #뉴스 #shorts",
+            "tags": ["뉴스", "뉴스요약", target_kr, target_kr+"뉴스", "오늘의"+target_kr, "shorts"],
             "categoryId": "25"  # News & Politics
         },
         "status": {
@@ -448,56 +448,82 @@ def upload_video_to_youtube_news(video_path):
 
     print(f"✅ 업로드 완료! YouTube Video ID: {response.get('id')}")
 
-    # token.json 삭제
-    try:
-        os.remove("token.json")
-        print("token.json 파일 삭제 완료.")
-    except FileNotFoundError:
-        print("token.json 파일이 이미 존재하지 않음.")
-    except Exception as e:
-        print(f"token.json 삭제 중 오류 발생: {e}")
-
+    if target_kr == "조비 에비에이션":
+        # token.json 삭제
+        try:
+            os.remove("token.json")
+            print("token.json 파일 삭제 완료.")
+        except FileNotFoundError:
+            print("token.json 파일이 이미 존재하지 않음.")
+        except Exception as e:
+            print(f"token.json 삭제 중 오류 발생: {e}")
+    elif target_kr == "테슬라":
+        run_daily_pipeline_news_jovy()
 
 def run_daily_pipeline_news():
-    print("🚀 뉴스 요약 쇼츠 생성 시작")
+    print("🚀 테슬라 뉴스 요약 쇼츠 생성 시작")
     us_newsdata = fetch_newsdata_articles("tesla", country="us", language="en")
     save_articles("us", "newsdata", us_newsdata)
 
     collected_articles = get_news_from_html()
     summaries = summarize_articles(collected_articles)
 
-    create_intro_image_news()
     if len(summaries) > 0:
+        create_intro_image_news("tesla", "테슬라")
         for idx, summary in enumerate(summaries):
             create_body_image(summary, idx)
-    create_outro_image()
+        create_outro_image()
 
-    date_str = datetime.now().strftime("%Y%m%d")
+        date_str = datetime.now().strftime("%Y%m%d")
 
-    create_youtube_shorts_video(
-        intro_path=OUTPUT_INTRO,
-        body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
-        outro_path=OUTPUT_OUTRO,
-        bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
-        output_path=os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4")
-    )
+        create_youtube_shorts_video(
+            intro_path=OUTPUT_INTRO,
+            body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
+            outro_path=OUTPUT_OUTRO,
+            bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
+            output_path=os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4")
+        )
 
-    # base64 문자열 가져오기
-    # token_b64 = os.getenv("TOKEN_JSON_BASE64")
-    # with open("token.json", "wb") as f:
-    #     f.write(base64.b64decode(token_b64))
+        # ⏭️ 다음 단계: YouTube 업로드
+        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), "테슬라")
+    else:
+        run_daily_pipeline_news_jovy()
 
-    # # 디코딩 후 token.json로 저장
-    # if token_b64:
-    #     with open("token.json", "wb") as f:
-    #         f.write(base64.b64decode(token_b64))
-    #     print("token.json 파일 복원 완료.")
-    # else:
-    #     print("TOKEN_JSON_BASE64 환경변수가 설정되지 않았습니다.")
+def run_daily_pipeline_news_jovy():
+    print("🚀 조비 뉴스 요약 쇼츠 생성 시작")
+    us_newsdata = fetch_newsdata_articles('Joby OR "Joby Aviation"', country="us", language="en")
+    save_articles("us", "newsdata", us_newsdata)
 
-    # ⏭️ 다음 단계: YouTube 업로드
-    upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"))
+    collected_articles = get_news_from_html()
+    summaries = summarize_articles(collected_articles)
 
+    if len(summaries) > 0:
+        create_intro_image_news("Jovy Aviation", "조비 에비에이션")
+        for idx, summary in enumerate(summaries):
+            create_body_image(summary, idx)
+        create_outro_image()
+
+        date_str = datetime.now().strftime("%Y%m%d")
+
+        create_youtube_shorts_video(
+            intro_path=OUTPUT_INTRO,
+            body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
+            outro_path=OUTPUT_OUTRO,
+            bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
+            output_path=os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4")
+        )
+
+        # ⏭️ 다음 단계: YouTube 업로드
+        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4"), "조비 에비에이션")
+    else:
+        # token.json 삭제
+        try:
+            os.remove("token.json")
+            print("token.json 파일 삭제 완료.")
+        except FileNotFoundError:
+            print("token.json 파일이 이미 존재하지 않음.")
+        except Exception as e:
+            print(f"token.json 삭제 중 오류 발생: {e}")
 
 
 

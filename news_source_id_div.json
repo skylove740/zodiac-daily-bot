@@ -128,5 +128,40 @@
         "source_name": "Menafn",
         "attribute": "id",
         "value": "ContentPlaceHolder1_div_story"
+    },
+    {
+        "source_name": "Business Insider",
+        "attribute": "class",
+        "value": "es-post-body grid-area-post-body"
+    },
+    {
+        "source_name": "Nhpr",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Notebookcheck",
+        "attribute": "id",
+        "value": "content"
+    },
+    {
+        "source_name": "Technologyreview",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Teslarati",
+        "attribute": "id",
+        "value": "mvp-content-main"
+    },
+    {
+        "source_name": "The American Prospect",
+        "attribute": "id",
+        "value": "content"
+    },
+    {
+        "source_name": "Wired",
+        "attribute": "class",
+        "value": "ArticlePageChunks-fwcPjP cAlDKu"
     }
 ]
