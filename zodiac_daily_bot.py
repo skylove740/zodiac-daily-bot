@@ -162,6 +162,7 @@ def get_news_from_html():
     print("\n=== 못 찾은 source_name 목록 ===")
     for s in sorted(unknown_sources):
         print("-", s)
+        print("soruce url : ", source_map.get(s, {}).get("url", "N/A"))
 
     return collected_articles
 
@@ -255,23 +256,24 @@ def summarize_articles(articles):
             )
             print("기사 길이 : ", len(article))
 
-            response = openai.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "당신은 주식 및 경제 뉴스 전문 요약가입니다."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0,
-                max_tokens=300
-            )
+            if len(article) > 10:
+                response = openai.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "당신은 주식 및 경제 뉴스 전문 요약가입니다."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0,
+                    max_tokens=300
+                )
 
-            summary = response.choices[0].message.content.strip()
-            summarized_results.append(summary)
+                summary = response.choices[0].message.content.strip()
+                summarized_results.append(summary)
 
-            print(f"[{idx}] 요약 완료:")
-            print(summary)
-            print("=" * 50)
-            print("요약 길이 : ", len(summary)) 
+                print(f"[{idx}] 요약 완료:")
+                print(summary)
+                print("=" * 50)
+                print("요약 길이 : ", len(summary)) 
 
         except Exception as e:
             print(f"[{idx}] 요약 실패: {e}")
@@ -305,7 +307,7 @@ def create_intro_image_news():
 
     img = Image.open(INTRO_BG).convert("RGBA")
     W, H = img.size
-    draw = ImageDraw.Draw(img)
+    draw = ImageDraw.Draw(img, "RGBA")
 
     # 폰트 크기 조정 (전체 높이의 절반 차지)
     font_size = 10

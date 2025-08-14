@@ -113,5 +113,20 @@
         "source_name": "Wyoming Tribune Eagle",
         "attribute": "id",
         "value": "article-body"
+    },
+    {
+        "source_name": "Brainerddispatch",
+        "attribute": "class",
+        "value": "RichTextArticleBody RichTextBody"
+    },
+    {
+        "source_name": "Financialcontent",
+        "attribute": "id",
+        "value": "articlecontent"
+    },
+    {
+        "source_name": "Menafn",
+        "attribute": "id",
+        "value": "ContentPlaceHolder1_div_story"
     }
 ]
