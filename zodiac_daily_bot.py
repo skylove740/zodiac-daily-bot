@@ -1231,11 +1231,7 @@ def run_daily_pipeline_star():
 
 if __name__ == "__main__":
 
-    # run_daily_pipeline()  # 수동 실행도 가능
-
-    run_daily_pipeline_news()
-    # summarize_all()
-    # generate_all_summary_images()
+    run_daily_pipeline()  # 수동 실행도 가능
 
     # scheduler.start()
     # app.run(host="0.0.0.0", port=8080)
