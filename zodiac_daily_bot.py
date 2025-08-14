@@ -22,7 +22,6 @@ import feedparser
 import json
 from newsdataapi import NewsDataApiClient
 from bs4 import BeautifulSoup
-import requests
 import textwrap
 
 load_dotenv()
