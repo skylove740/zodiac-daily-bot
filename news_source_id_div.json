@@ -1,0 +1,117 @@
+[
+    {
+        "source_name": "Electrek",
+        "attribute": "class",
+        "value": "container med post-content"
+    },
+    {
+        "source_name": "Ivpressonline",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Bradford Era",
+        "attribute": "class",
+        "value": "body content-single-wrap multiline"
+    },
+    {
+        "source_name": "Newschannel 5",
+        "attribute": "class",
+        "value": "RichTextArticleBody-body"
+    },
+    {
+        "source_name": "National Law Review",
+        "attribute": "class",
+        "value": "content"
+    },
+    {
+        "source_name": "Usa Today",
+        "attribute": "class",
+        "value": "gnt_ar_b"
+    },
+    {
+        "source_name": "Forbes",
+        "attribute": "class",
+        "value": "fs-article fs-responsive-text current-article article-body"
+    },
+    {
+        "source_name": "Clean Technica",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Electrek",
+        "attribute": "class",
+        "value": "container med post-content"
+    },
+    {
+        "source_name": "Wv News",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "24/7 Wall St",
+        "attribute": "class",
+        "value": "entry-content column content primary is-two-thirds"
+    },
+    {
+        "source_name": "Griffindailynews",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Jalopnik",
+        "attribute": "class",
+        "value": "news-article"
+    },
+    {
+        "source_name": "Pc Gamer",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Benzinga",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Biztoc",
+        "attribute": "class",
+        "value": "ea-article-body"
+    },
+    {
+        "source_name": "Citizentribune",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Emporiagazette",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Fort Bend Herald",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Greenevillesun",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Los Angeles Daily News",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Themercury",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Wyoming Tribune Eagle",
+        "attribute": "id",
+        "value": "article-body"
+    }
+]
