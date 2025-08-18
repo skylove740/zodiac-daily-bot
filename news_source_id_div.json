@@ -163,5 +163,70 @@
         "source_name": "Wired",
         "attribute": "class",
         "value": "ArticlePageChunks-fwcPjP cAlDKu"
+    },
+    {
+        "source_name": "Zerohedge",
+        "attribute": "class",
+        "value": "ContributorContent_body__LRYS0 ContributorBody_container__ISIsz"
+    },
+    {
+        "source_name": "Simple Flying",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Defenseworld Net",
+        "attribute": "class",
+        "value": "entry"
+    },
+    {
+        "source_name": "Webpronews",
+        "attribute": "class",
+        "value": "article-content"
+    },
+    {
+        "source_name": "The Big Picture",
+        "attribute": "class",
+        "value": "pf-content"
+    },
+    {
+        "source_name": "La Grada",
+        "attribute": "class",
+        "value": "content-inner"
+    },
+    {
+        "source_name": "Ked Global",
+        "attribute": "class",
+        "value": "_content"
+    },
+    {
+        "source_name": "Headtopics",
+        "attribute": "class",
+        "value": "Article-contentBlocks"
+    },
+    {
+        "source_name": "Futurism",
+        "attribute": "id",
+        "value": "incArticle"
+    },
+    {
+        "source_name": "Yahoo! News",
+        "attribute": "class",
+        "value": "col-body"
+    },
+    {
+        "source_name": "Google News",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Union-bulletin",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Thestreet",
+        "attribute": "class",
+        "value": "m-detail--body"
     }
 ]

@@ -62,8 +62,8 @@ NEWS_SOURCE_FILE = os.path.join(BASE_DIR, "news_source_id_div.json")
 ARTICLES_FILE = os.path.join(BASE_DIR, f"us_newsdata_articles.json")
 UNKNOWN_SOURCE_FILE = os.path.join(BASE_DIR, "unknown_sources.txt")
 
-INTRO_BG = os.path.join(BG_DIR, "intro_bg.png")
-BODY_BG = os.path.join(BG_DIR, "body_bg.png")
+# INTRO_BG = os.path.join(BG_DIR, "intro_bg.png")
+# BODY_BG = os.path.join(BG_DIR, "body_bg.png")
 OUTRO_BG = os.path.join(BG_DIR, "outro_bg.png")
 
 OUTPUT_INTRO = os.path.join(OUT_DIR, "intro_output.jpg")
@@ -157,12 +157,12 @@ def get_news_from_html():
     print("\n=== 전체 기사 본문 ===")
     for idx, art in enumerate(collected_articles, start=1):
         print(f"[{idx}] {art['source_name']} ({art['link']})")
-        print(art["content"][:500], "...\n")  # 앞부분 500자만 출력
+        print(art["content"][:400], "...\n")  # 앞부분 500자만 출력
 
     print("\n=== 못 찾은 source_name 목록 ===")
     for s in sorted(unknown_sources):
         print("-", s)
-        print("soruce url : ", source_map.get(s, {}).get("source_url", "N/A"))
+        print("soruce url : ", source_map[source_name].get("source_url", "N/A"))
 
     return collected_articles
 
@@ -273,7 +273,10 @@ def summarize_articles(articles):
                 print(f"[{idx}] 요약 완료:")
                 print(summary)
                 print("=" * 50)
-                print("요약 길이 : ", len(summary)) 
+                print("요약 길이 : ", len(summary))
+            else:
+                print(f"[{idx}] 요약 생략: 기사 길이가 너무 짧습니다.")
+                # summarized_results.append("기사 길이가 너무 짧아 요약할 수 없습니다.")
 
         except Exception as e:
             print(f"[{idx}] 요약 실패: {e}")
@@ -283,6 +286,8 @@ def summarize_articles(articles):
 
 # ===== 유틸: 테두리 + 반투명 박스 텍스트 =====
 def draw_text_with_box(draw, text, position, font, text_color, box_color, outline_color):
+    # draw는 원본 이미지의 draw 객체
+    img = draw.im  # 원본 이미지 객체 얻기
     text_bbox = draw.textbbox(position, text, font=font)
     box_padding = 10
     box_coords = (
@@ -291,21 +296,30 @@ def draw_text_with_box(draw, text, position, font, text_color, box_color, outlin
         text_bbox[2] + box_padding,
         text_bbox[3] + box_padding
     )
-    draw.rectangle(box_coords, fill=box_color)
-    # 테두리 효과
+    # 1. 오버레이 이미지 생성
+    overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    overlay_draw.rectangle(box_coords, fill=box_color)
+    # 2. 원본과 오버레이 합성
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img, "RGBA")
+    # 3. 테두리 효과
     x, y = position
     for dx in [-1, 1]:
         for dy in [-1, 1]:
             draw.text((x + dx, y + dy), text, font=font, fill=outline_color)
-    # 본문 텍스트
+    # 4. 본문 텍스트
     draw.text(position, text, font=font, fill=text_color)
+    return img  # 필요시 반환
 
 # ===== 인트로 이미지 생성 =====
 def create_intro_image_news(target_en, target_kr):
     date_str = datetime.now().strftime("%Y.%m.%d")
     lines = [date_str, target_kr, "관련 뉴스"]
 
-    img = Image.open(INTRO_BG).convert("RGBA")
+    intro_bg = os.path.join(BG_DIR, "intro_bg_"+target_en.split(" ")[0]+".png")
+
+    img = Image.open(intro_bg).convert("RGBA")
     W, H = img.size
     draw = ImageDraw.Draw(img, "RGBA")
 
@@ -323,14 +337,17 @@ def create_intro_image_news(target_en, target_kr):
     for line in lines:
         w, h = draw.textsize(line, font=font)
         x = (W - w) // 2
-        draw_text_with_box(draw, line, (x, y_offset), font, "white", (0, 0, 0, 150), "black")
+        img = draw_text_with_box(draw, line, (x, y_offset), font, "white", (0, 0, 0, 150), "black")
+        draw = ImageDraw.Draw(img, "RGBA")  # draw 객체 갱신
         y_offset += h + 10
 
     img.convert("RGB").save(OUTPUT_INTRO)
 
 # ===== 본문 이미지 생성 =====
-def create_body_image(text, idx):
-    img = Image.open(BODY_BG).convert("RGBA")
+def create_body_image(text, idx, target):
+    body_bg = os.path.join(BG_DIR, "body_bg_"+target+".png")
+    
+    img = Image.open(body_bg).convert("RGBA")
     W, H = img.size
     draw = ImageDraw.Draw(img, "RGBA")
 
@@ -365,6 +382,7 @@ def create_body_image(text, idx):
 
 # ===== 아웃트로 이미지 =====
 def create_outro_image():
+    # outro_bg = os.path.join(BG_DIR, "outro_bg_"+target+".png")
     img = Image.open(OUTRO_BG)
     img.save(OUTPUT_OUTRO)
 
@@ -471,7 +489,7 @@ def run_daily_pipeline_news():
     if len(summaries) > 0:
         create_intro_image_news("tesla", "테슬라")
         for idx, summary in enumerate(summaries):
-            create_body_image(summary, idx)
+            create_body_image(summary, idx, "tesla")
         create_outro_image()
 
         date_str = datetime.now().strftime("%Y%m%d")
@@ -500,7 +518,7 @@ def run_daily_pipeline_news_jovy():
     if len(summaries) > 0:
         create_intro_image_news("Jovy Aviation", "조비 에비에이션")
         for idx, summary in enumerate(summaries):
-            create_body_image(summary, idx)
+            create_body_image(summary, idx, "Jovy")
         create_outro_image()
 
         date_str = datetime.now().strftime("%Y%m%d")
