@@ -437,9 +437,9 @@ def upload_video_to_youtube_news(video_path, target_kr):
 
     body = {
         "snippet": {
-            "title": f"{date_str} "+target_kr+" 관련 경제 뉴스",  # 영상 제목
+            "title": f"{date_str} "+target_kr+" 관련 뉴스",  # 영상 제목
             "description":
-            f"{date_str} 오늘의 "+target_kr+" 관련 경제 뉴스 요약입니다.\n\n#뉴스요약 #"+target_kr+" #"+target_kr+"뉴스 #오늘의"+target_kr+" #뉴스 #shorts",
+            f"{date_str} 오늘의 "+target_kr+" 관련 뉴스 요약입니다.\n\n#뉴스요약 #"+target_kr+" #"+target_kr+"뉴스 #오늘의"+target_kr+" #뉴스 #shorts",
             "tags": ["뉴스", "뉴스요약", target_kr, target_kr+"뉴스", "오늘의"+target_kr, "shorts"],
             "categoryId": "25"  # News & Politics
         },
