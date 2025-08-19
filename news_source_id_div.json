@@ -228,5 +228,45 @@
         "source_name": "Thestreet",
         "attribute": "class",
         "value": "m-detail--body"
+    },
+    {
+        "source_name": "Daily Press",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Mcall",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Orovillemr",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "The Lincolnian Online",
+        "attribute": "class",
+        "value": "elementor-widget-container"
+    },
+    {
+        "source_name": "Kcra",
+        "attribute": "class",
+        "value": "article-content--body-text"
+    },
+    {
+        "source_name": "Wcvb",
+        "attribute": "class",
+        "value": "article-content--body-text"
+    },
+    {
+        "source_name": "Wmur",
+        "attribute": "class",
+        "value": "article-content--body-text"
+    },
+    {
+        "source_name": "Wvtm13",
+        "attribute": "class",
+        "value": "article-content--body-text"
     }
 ]

@@ -94,6 +94,7 @@ def get_news_from_html():
     for article in articles:
         source_name = article.get("source_name").strip()
         link = article.get("link")
+        source_url = article.get("source_url", "")
 
         if not link or not source_name:
             print("Missing link or source_name, skipping...")
@@ -138,11 +139,11 @@ def get_news_from_html():
 
             else:
                 # source_name이 rules에 없음
-                unknown_sources.add(source_name)
+                unknown_sources.add([source_name, source_url])
 
         except Exception as e:
             print(f"Error processing {link}: {e}")
-            unknown_sources.add(source_name)
+            unknown_sources.add([source_name, source_url])
 
     # unknown_sources.txt 파일 저장 (추가 모드)
     if unknown_sources:
@@ -162,8 +163,6 @@ def get_news_from_html():
     print("\n=== 못 찾은 source_name 목록 ===")
     for s in sorted(unknown_sources):
         print("-", s)
-        if s in source_map:
-            print("soruce url : ", source_map[s].get("source_url", "N/A"))
 
     return collected_articles
 
@@ -239,7 +238,7 @@ def save_articles(region, source, articles):
     print(f"[SAVED] {len(articles)}개 기사 저장 완료 → {filename}")
 
 
-def summarize_articles(articles):
+def summarize_articles(articles, target):
     summarized_results = []
 
     for idx, art in enumerate(articles, start=1):
@@ -261,14 +260,32 @@ def summarize_articles(articles):
                 response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
-                        {"role": "system", "content": "당신은 주식 및 경제 뉴스 전문 요약가입니다."},
+                        {"role": "system", "content": "당신은 뉴스 요약 전문가입니다."},
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0,
-                    max_tokens=300
+                    temperature=0
+                    # max_tokens=300
                 )
 
                 summary = response.choices[0].message.content.strip()
+                if len(summary) < 3:
+                    print(f"[{idx}] 요약 실패: 요약이 너무 짧습니다.")
+                    continue
+
+                response = openai.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "대답은 OK 또는 NO로만 대답하세요."},
+                        {"role": "user", "content": f"이 요약이 {target}과 연관 있는 기사가 정말 맞나요? 요약 : {summary}"}
+                    ],
+                    temperature=0
+                    # max_tokens=300
+                )
+
+                if response.choices[0].message.content.strip().lower() != "ok":
+                    print(f"[{idx}] 요약 생략: {target}과 관련 없는 기사입니다.")
+                    continue
+
                 summarized_results.append(summary)
 
                 print(f"[{idx}] 요약 완료:")
@@ -485,7 +502,7 @@ def run_daily_pipeline_news():
     save_articles("us", "newsdata", us_newsdata)
 
     collected_articles = get_news_from_html()
-    summaries = summarize_articles(collected_articles)
+    summaries = summarize_articles(collected_articles, "tesla")
 
     if len(summaries) > 0:
         create_intro_image_news("tesla", "테슬라")
@@ -514,7 +531,7 @@ def run_daily_pipeline_news_jovy():
     save_articles("us", "newsdata", us_newsdata)
 
     collected_articles = get_news_from_html()
-    summaries = summarize_articles(collected_articles)
+    summaries = summarize_articles(collected_articles, "Jovy Aviation")
 
     if len(summaries) > 0:
         create_intro_image_news("Jovy Aviation", "조비 에비에이션")
