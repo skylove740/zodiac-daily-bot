@@ -162,7 +162,8 @@ def get_news_from_html():
     print("\n=== 못 찾은 source_name 목록 ===")
     for s in sorted(unknown_sources):
         print("-", s)
-        print("soruce url : ", source_map[s].get("source_url", "N/A"))
+        if s in source_map:
+            print("soruce url : ", source_map[s].get("source_url", "N/A"))
 
     return collected_articles
 
