@@ -139,11 +139,11 @@ def get_news_from_html():
 
             else:
                 # source_name이 rules에 없음
-                unknown_sources.add([source_name, source_url])
+                unknown_sources.add((source_name, source_url))
 
         except Exception as e:
             print(f"Error processing {link}: {e}")
-            unknown_sources.add([source_name, source_url])
+            unknown_sources.add((source_name, source_url))
 
     # unknown_sources.txt 파일 저장 (추가 모드)
     if unknown_sources:
