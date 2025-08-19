@@ -286,9 +286,9 @@ def summarize_articles(articles):
     return summarized_results
 
 # ===== 유틸: 테두리 + 반투명 박스 텍스트 =====
-def draw_text_with_box(draw, text, position, font, text_color, box_color, outline_color):
+def draw_text_with_box(img, text, position, font, text_color, box_color, outline_color):
     # draw는 원본 이미지의 draw 객체
-    img = draw.im  # 원본 이미지 객체 얻기
+    draw = ImageDraw.Draw(img, "RGBA")
     text_bbox = draw.textbbox(position, text, font=font)
     box_padding = 10
     box_coords = (
@@ -338,7 +338,7 @@ def create_intro_image_news(target_en, target_kr):
     for line in lines:
         w, h = draw.textsize(line, font=font)
         x = (W - w) // 2
-        img = draw_text_with_box(draw, line, (x, y_offset), font, "white", (0, 0, 0, 150), "black")
+        img = draw_text_with_box(img, line, (x, y_offset), font, "white", (0, 0, 0, 150), "black")
         draw = ImageDraw.Draw(img, "RGBA")  # draw 객체 갱신
         y_offset += h + 10
 
