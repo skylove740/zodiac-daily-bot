@@ -147,12 +147,13 @@ def get_news_from_html():
 
     # unknown_sources.txt 파일 저장 (추가 모드)
     if unknown_sources:
+        lines = [f"{name} | {url}" for name, url in sorted(unknown_sources)]
         if not os.path.exists(UNKNOWN_SOURCE_FILE):
             with open(UNKNOWN_SOURCE_FILE, "w", encoding="utf-8") as f:
-                f.write("\n".join(sorted(unknown_sources)) + "\n")
+                f.write("\n".join(lines) + "\n")
         else:
             with open(UNKNOWN_SOURCE_FILE, "a", encoding="utf-8") as f:
-                f.write("\n".join(sorted(unknown_sources)) + "\n")
+                f.write("\n".join(lines) + "\n")
 
     # 결과 출력
     print("\n=== 전체 기사 본문 ===")
@@ -161,8 +162,8 @@ def get_news_from_html():
         print(art["content"][:400], "...\n")  # 앞부분 500자만 출력
 
     print("\n=== 못 찾은 source_name 목록 ===")
-    for s in sorted(unknown_sources):
-        print("-", s)
+    for su, s in sorted(unknown_sources):
+        print("-", su,":",s)
 
     return collected_articles
 
@@ -388,7 +389,11 @@ def create_body_image(text, idx, target):
 
     # 반투명 박스
     box_coords = (x - 20, y - 20, x + tw + 20, y + th + 20)
-    draw.rectangle(box_coords, fill=(0, 0, 0, 150))
+    overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    overlay_draw.rectangle(box_coords, fill=(0, 0, 0, 150))
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img, "RGBA")  # draw 객체 갱신
 
     # 테두리 + 텍스트
     for dx in [-1, 1]:
