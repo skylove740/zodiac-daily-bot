@@ -268,5 +268,45 @@
         "source_name": "Wvtm13",
         "attribute": "class",
         "value": "article-content--body-text"
+    },
+    {
+        "source_name": "The Daily Wire",
+        "attribute": "id",
+        "value": "post-body-text"
+    },
+    {
+        "source_name": "Coming Soon",
+        "attribute": "class",
+        "value": "entry-content wp-block-post-content is-layout-flow wp-block-post-content-is-layout-flow"
+    },
+    {
+        "source_name": "Courant",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "East Bay Times",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Insider Trading",
+        "attribute": "class",
+        "value": "content-without-wrap single-content clearfix"
+    },
+    {
+        "source_name": "The Mercury News",
+        "attribute": "class",
+        "value": "article-content"
+    },
+    {
+        "source_name": "Times Argus",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Travel And Tour World",
+        "attribute": "class",
+        "value": "left-main-bodybox textUL"
     }
 ]

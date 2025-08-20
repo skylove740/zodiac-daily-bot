@@ -272,6 +272,9 @@ def summarize_articles(articles, target):
                 if len(summary) < 3:
                     print(f"[{idx}] 요약 실패: 요약이 너무 짧습니다.")
                     continue
+                elif len(summary) > 350:
+                    print(f"[{idx}] 요약 : 요약이 너무 깁니다. 다시 한 번 요약하겠습니다.")
+                    continue
 
                 response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
@@ -362,46 +365,67 @@ def create_intro_image_news(target_en, target_kr):
 
     img.convert("RGB").save(OUTPUT_INTRO)
 
+def split_korean_sentences(text):
+    # 한글 기준 문장 분리 (마침표, 물음표, 느낌표 뒤에 줄바꿈)
+    sentences = re.split(r'(?<=[.?!])\s+', text.strip())
+    # 빈 문장 제거
+    return [s for s in sentences if s]
+
+
 # ===== 본문 이미지 생성 =====
 def create_body_image(text, idx, target):
-    body_bg = os.path.join(BG_DIR, "body_bg_"+target+".png")
-    
-    img = Image.open(body_bg).convert("RGBA")
-    W, H = img.size
-    draw = ImageDraw.Draw(img, "RGBA")
+    # 1. idx 붙이기
+    text = f"{idx}) {text}"
+    # 2. 문장 분리
+    sentences = split_korean_sentences(text)
+    # 3. 두 문장씩 묶기
+    pages = []
+    for i in range(0, len(sentences), 2):
+        page_text = " ".join(sentences[i:i+2])
+        pages.append(page_text)
 
-    # 폰트 크기 맞추기
-    font_size = 50
-    while True:
-        font = ImageFont.truetype(FONT_PATH, font_size)
-        wrapped = textwrap.fill(text, width=20)  # 줄바꿈
-        tw, th = draw.multiline_textsize(wrapped, font=font, spacing=10)
-        if tw > W * 0.9 or th > H * 0.9:
-            font_size -= 2
+    saved_files = []
+    for page_num, page_text in enumerate(pages, start=1):
+        body_bg = os.path.join(BG_DIR, "body_bg_"+target+".png")
+        img = Image.open(body_bg).convert("RGBA")
+        W, H = img.size
+        draw = ImageDraw.Draw(img, "RGBA")
+
+        # 폰트 크기 맞추기
+        font_size = 50
+        while True:
             font = ImageFont.truetype(FONT_PATH, font_size)
-            wrapped = textwrap.fill(text, width=20)
-            break
-        font_size += 2
+            wrapped = textwrap.fill(page_text, width=20)
+            tw, th = draw.multiline_textsize(wrapped, font=font, spacing=10)
+            if tw > W * 0.9 or th > H * 0.9:
+                font_size -= 2
+                font = ImageFont.truetype(FONT_PATH, font_size)
+                wrapped = textwrap.fill(page_text, width=20)
+                break
+            font_size += 2
 
-    tw, th = draw.multiline_textsize(wrapped, font=font, spacing=10)
-    x = (W - tw) // 2
-    y = (H - th) // 2
+        tw, th = draw.multiline_textsize(wrapped, font=font, spacing=10)
+        x = (W - tw) // 2
+        y = (H - th) // 2
 
-    # 반투명 박스
-    box_coords = (x - 20, y - 20, x + tw + 20, y + th + 20)
-    overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
-    overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.rectangle(box_coords, fill=(0, 0, 0, 150))
-    img = Image.alpha_composite(img, overlay)
-    draw = ImageDraw.Draw(img, "RGBA")  # draw 객체 갱신
+        # 반투명 박스
+        box_coords = (x - 20, y - 20, x + tw + 20, y + th + 20)
+        overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle(box_coords, fill=(0, 0, 0, 150))
+        img = Image.alpha_composite(img, overlay)
+        draw = ImageDraw.Draw(img, "RGBA")
 
-    # 테두리 + 텍스트
-    for dx in [-1, 1]:
-        for dy in [-1, 1]:
-            draw.multiline_text((x + dx, y + dy), wrapped, font=font, fill="black", spacing=10)
-    draw.multiline_text((x, y), wrapped, font=font, fill="white", spacing=10)
+        # 테두리 + 텍스트
+        for dx in [-1, 1]:
+            for dy in [-1, 1]:
+                draw.multiline_text((x + dx, y + dy), wrapped, font=font, fill="black", spacing=10)
+        draw.multiline_text((x, y), wrapped, font=font, fill="white", spacing=10)
 
-    img.convert("RGB").save(OUTPUT_BODY+str(idx)+'.jpg')
+        out_path = f"{OUTPUT_BODY}{str(idx)}_{page_num}.jpg"
+        img.convert("RGB").save(out_path)
+        saved_files.append(out_path)
+    return saved_files
 
 # ===== 아웃트로 이미지 =====
 def create_outro_image():
@@ -410,10 +434,17 @@ def create_outro_image():
     img.save(OUTPUT_OUTRO)
 
 
+def extract_numbers(filename):
+    # body_output{idx}_{page}.jpg에서 idx와 page를 추출
+    m = re.search(r'body_output(\d+)_(\d+)\.jpg', filename)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    return 0, 0
+
 def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, output_path):
     # 장면 길이 설정 (250자 기준 읽을 수 있는 시간: 약 7~8초)
     intro_duration = 3  # 인트로는 짧게
-    body_duration = 8   # 본문 한 장당
+    body_duration = 4   # 본문 한 장당
     outro_duration = 2  # 아웃트로는 짧게
 
     clips = []
@@ -422,8 +453,11 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
     intro_clip = ImageClip(intro_path).set_duration(intro_duration)
     clips.append(intro_clip)
 
-    # 2. 본문 이미지들
-    body_images = sorted([f for f in os.listdir(body_dir) if f.startswith("body") and f.endswith(".jpg")])
+    # 본문 이미지들: body_output{idx}_{page}.jpg 형식 모두 사용
+    body_images = sorted(
+        [f for f in os.listdir(body_dir) if f.startswith("body_output") and f.endswith(".jpg")],
+        key=extract_numbers
+    )
     for img_file in body_images:
         img_path = os.path.join(body_dir, img_file)
         body_clip = ImageClip(img_path).set_duration(body_duration)
