@@ -174,15 +174,17 @@ def get_time_range_iso():
     start = start.replace(hour=7, minute=30, second=0, microsecond=0)
     return start.isoformat(), now.isoformat()
 
-def fetch_newsdata_articles(q, country=None, language=None):
+def fetch_newsdata_articles(q=None, country=None, language=None, category=None):
     # 최신 뉴스 endpoint (/1/news)
     params = {}
     if country:
         params["country"] = country
     if language:
         params["language"] = language
-    # params["category"] = "business"  # 카테고리를 유지할지 제거할지 선택 가능
-    params["q"] = q  # '테슬라' 관련 기사만 필터링
+    if category:
+        params["category"] = category
+    if q:
+        params["q"] = q  # '테슬라' 관련 기사만 필터링
     resp = api.news_api(**params)
     return resp.get("results", [])
 
@@ -248,7 +250,7 @@ def summarize_articles(articles, target):
             # GPT에게 요청할 프롬프트
             prompt = (
                 "아래 기사를 주가에 영향을 줄 수 있는 핵심 내용 위주로, "
-                "2줄 내로 최대한 간결하게 요약해 주세요.\n"
+                "최대한 간결하게 요약해 주세요.\n"
                 "한글 글자 기준 250자 내로 요약해주세요.\n"
                 "모든 내용은 실제 기사 내용에서 인용해야 하고, 없는 사실을 지어내면 안됩니다.\n"
                 "각 줄은 간결하고 명확해야 하며, 주제를 분명히 드러내야 합니다. 최종 출력은 한글이어야 합니다.\n"
@@ -272,9 +274,22 @@ def summarize_articles(articles, target):
                 if len(summary) < 3:
                     print(f"[{idx}] 요약 실패: 요약이 너무 짧습니다.")
                     continue
-                elif len(summary) > 350:
+                elif len(summary) > 400:
                     print(f"[{idx}] 요약 : 요약이 너무 깁니다. 다시 한 번 요약하겠습니다.")
-                    continue
+                    response = openai.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": "당신은 뉴스 요약 전문가입니다."},
+                            {"role": "user", "content": "핵심 내용을 살려서 다음의 요약된 기사를 한글 기준 250자 내로 다시 요약해 주세요.\n요약 기사 : " + summary}
+                        ],
+                        temperature=0
+                        # max_tokens=300
+                    )
+                    summary = response.choices[0].message.content.strip()
+
+
+                print(f"[{idx}] 1차 요약 : {summary}")
+
 
                 response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
@@ -375,13 +390,13 @@ def split_korean_sentences(text):
 # ===== 본문 이미지 생성 =====
 def create_body_image(text, idx, target):
     # 1. idx 붙이기
-    text = f"{idx}) {text}"
+    text = f"{(idx+1)}) {text}"
     # 2. 문장 분리
     sentences = split_korean_sentences(text)
-    # 3. 두 문장씩 묶기
+    # 한 문장씩 묶기
     pages = []
-    for i in range(0, len(sentences), 2):
-        page_text = " ".join(sentences[i:i+2])
+    for i in range(len(sentences)):
+        page_text = sentences[i]
         pages.append(page_text)
 
     saved_files = []
@@ -524,6 +539,8 @@ def upload_video_to_youtube_news(video_path, target_kr):
     print(f"✅ 업로드 완료! YouTube Video ID: {response.get('id')}")
 
     if target_kr == "조비 에비에이션":
+        run_daily_pipeline_news_business()
+    elif target_kr == "경제":
         # token.json 삭제
         try:
             os.remove("token.json")
@@ -590,6 +607,36 @@ def run_daily_pipeline_news_jovy():
 
         # ⏭️ 다음 단계: YouTube 업로드
         upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4"), "조비 에비에이션")
+    else:
+        run_daily_pipeline_news_business()
+
+
+def run_daily_pipeline_news_business():
+    print("🚀 경제 뉴스 요약 쇼츠 생성 시작")
+    us_newsdata = fetch_newsdata_articles(None, country="us", language="en", category="business")
+    save_articles("us", "newsdata", us_newsdata)
+
+    collected_articles = get_news_from_html()
+    summaries = summarize_articles(collected_articles, "business")
+
+    if len(summaries) > 0:
+        create_intro_image_news("business", "경제")
+        for idx, summary in enumerate(summaries):
+            create_body_image(summary, idx, "business")
+        create_outro_image()
+
+        date_str = datetime.now().strftime("%Y%m%d")
+
+        create_youtube_shorts_video(
+            intro_path=OUTPUT_INTRO,
+            body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
+            outro_path=OUTPUT_OUTRO,
+            bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
+            output_path=os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4")
+        )
+
+        # ⏭️ 다음 단계: YouTube 업로드
+        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4"), "경제")
     else:
         # token.json 삭제
         try:

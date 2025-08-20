@@ -308,5 +308,20 @@
         "source_name": "Travel And Tour World",
         "attribute": "class",
         "value": "left-main-bodybox textUL"
+    },
+    {
+        "source_name": "Gazette",
+        "attribute": "class",
+        "value": "asset-body"
+    },
+    {
+        "source_name": "Interesting Engineering",
+        "attribute": "class",
+        "value": "t-max-w-full t-w-main-layout t-flex t-flex-col t-justify-center  t-self-center t-tab-px-0 t-px-0 md:t-px-0 socialShare_relative__B0YIR"
+    },
+    {
+        "source_name": "Investing Us",
+        "attribute": "id",
+        "value": "article"
     }
 ]
