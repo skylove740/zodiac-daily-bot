@@ -323,5 +323,25 @@
         "source_name": "Investing Us",
         "attribute": "id",
         "value": "article"
+    },
+    {
+        "source_name": "Bbns",
+        "attribute": "class",
+        "value": "entry"
+    },
+    {
+        "source_name": "Insideevs",
+        "attribute": "class",
+        "value": "postBody"
+    },
+    {
+        "source_name": "The Daily Beast",
+        "attribute": "id",
+        "value": "main-article"
+    },
+    {
+        "source_name": "The Hacker News",
+        "attribute": "class",
+        "value": "articlebody clear cf"
     }
 ]
