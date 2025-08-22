@@ -295,7 +295,7 @@ def summarize_articles(articles, target):
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "대답은 OK 또는 NO로만 대답하세요."},
-                        {"role": "user", "content": f"이 요약이 {target}과 연관 있는 기사가 정말 맞나요? 요약 : {summary}"}
+                        {"role": "user", "content": f"이 요약이 {target}과 직접적으로 연관 있는 기사가 정말 맞나요? {target}에 대한 최신 기준의 웹 서치 확인 후 답변해 주세요. 요약 : {summary}"}
                     ],
                     temperature=0
                     # max_tokens=300
@@ -355,6 +355,10 @@ def create_intro_image_news(target_en, target_kr):
     lines = [date_str, target_kr, "관련 뉴스"]
 
     intro_bg = os.path.join(BG_DIR, "intro_bg_"+target_en.split(" ")[0]+".png")
+    # intro_bg가 없으면 fallback으로 대체
+    if not os.path.exists(intro_bg):
+        print(f"[경고] 파일이 존재하지 않습니다: {intro_bg}, 대체 이미지로 전환합니다.")
+        intro_bg = os.path.join(BG_DIR, "intro_bg_tesla.png")
 
     img = Image.open(intro_bg).convert("RGBA")
     W, H = img.size
@@ -402,6 +406,11 @@ def create_body_image(text, idx, target):
     saved_files = []
     for page_num, page_text in enumerate(pages, start=1):
         body_bg = os.path.join(BG_DIR, "body_bg_"+target+".png")
+        # intro_bg가 없으면 fallback으로 대체
+        if not os.path.exists(body_bg):
+            print(f"[경고] 파일이 존재하지 않습니다: {body_bg}, 대체 이미지로 전환합니다.")
+            body_bg = os.path.join(BG_DIR, "body_bg_tesla.png")
+        
         img = Image.open(body_bg).convert("RGBA")
         W, H = img.size
         draw = ImageDraw.Draw(img, "RGBA")
