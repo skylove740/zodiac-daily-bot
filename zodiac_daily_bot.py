@@ -459,7 +459,7 @@ def extract_numbers(filename):
 def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, output_path):
     # 장면 길이 설정 (250자 기준 읽을 수 있는 시간: 약 7~8초)
     intro_duration = 3  # 인트로는 짧게
-    body_duration = 4   # 본문 한 장당
+    body_duration = 3   # 본문 한 장당
     outro_duration = 2  # 아웃트로는 짧게
 
     clips = []
