@@ -23,6 +23,7 @@ import json
 from newsdataapi import NewsDataApiClient
 from bs4 import BeautifulSoup
 import textwrap
+import glob
 
 load_dotenv()
 
@@ -245,16 +246,16 @@ def summarize_articles(articles, target):
     summarized_results = []
 
     for idx, art in enumerate(articles, start=1):
+        if len(summarized_results) >= 3:
+            break  # 3개까지만 요약하고 반복 중지
         article = art["content"]
         try:
             # GPT에게 요청할 프롬프트
             prompt = (
-                "아래 기사를 주가에 영향을 줄 수 있는 핵심 내용 위주로, "
-                "최대한 간결하게 요약해 주세요.\n"
-                "한글 글자 기준 250자 내로 요약해주세요.\n"
+                "아래 기사를 주가에 영향을 줄 수 있는 핵심 내용 위주로 요약해 주세요\n"
                 "모든 내용은 실제 기사 내용에서 인용해야 하고, 없는 사실을 지어내면 안됩니다.\n"
-                "각 줄은 간결하고 명확해야 하며, 주제를 분명히 드러내야 합니다. 최종 출력은 한글이어야 합니다.\n"
-                "한글로 요약된 내용만 답변하세요\n\n"
+                "각 줄은 간결하고 명확해야 하며, 주제를 분명히 드러내야 합니다.\n"
+                "원문 그대로의 언어로 요약해 주세요\n\n"
                 f"기사 내용:\n{article}"
             )
             print("기사 길이 : ", len(article))
@@ -274,13 +275,13 @@ def summarize_articles(articles, target):
                 if len(summary) < 3:
                     print(f"[{idx}] 요약 실패: 요약이 너무 짧습니다.")
                     continue
-                elif len(summary) > 400:
+                elif len(summary) > 50:
                     print(f"[{idx}] 요약 : 요약이 너무 깁니다. 다시 한 번 요약하겠습니다.")
                     response = openai.chat.completions.create(
-                        model="gpt-3.5-turbo",
+                        model="gpt-4.1",
                         messages=[
-                            {"role": "system", "content": "당신은 뉴스 요약 전문가입니다."},
-                            {"role": "user", "content": "핵심 내용을 살려서 다음의 요약된 기사를 한글 기준 250자 내로 다시 요약해 주세요.\n요약 기사 : " + summary}
+                            {"role": "system", "content": "당신은 뉴스 요약 전문가입니다. "},
+                            {"role": "user", "content": "핵심 내용 위주로, 없는 사실을 지어내지 말고 요약해 주세요. 최종 출력은 한글로 번역해서 출력하세요. 다음의 요약된 기사를 한글 기준 100자 내로 다시 요약해 주세요.\n요약 기사 : " + summary}
                         ],
                         temperature=0
                         # max_tokens=300
@@ -292,7 +293,7 @@ def summarize_articles(articles, target):
 
 
                 response = openai.chat.completions.create(
-                    model="gpt-3.5-turbo",
+                    model="gpt-4.1",
                     messages=[
                         {"role": "system", "content": "대답은 OK 또는 NO로만 대답하세요."},
                         {"role": "user", "content": f"이 요약이 {target}과 직접적으로 연관 있는 기사가 정말 맞나요? {target}에 대한 최신 기준의 웹 서치 확인 후 답변해 주세요. 요약 : {summary}"}
@@ -349,8 +350,24 @@ def draw_text_with_box(img, text, position, font, text_color, box_color, outline
     draw.text(position, text, font=font, fill=text_color)
     return img  # 필요시 반환
 
+def delete_body_images():
+    """
+    OUTPUT_BODY로 시작하는 모든 jpg 파일 삭제
+    """
+    pattern = f"{OUTPUT_BODY}*.jpg"
+    files = glob.glob(pattern)
+    for file in files:
+        try:
+            os.remove(file)
+            print(f"삭제됨: {file}")
+        except Exception as e:
+            print(f"파일 삭제 오류: {file} - {e}")
+
 # ===== 인트로 이미지 생성 =====
 def create_intro_image_news(target_en, target_kr):
+    # 본문 이미지 생성 전 기존 이미지 삭제
+    delete_body_images()
+
     date_str = datetime.now().strftime("%Y.%m.%d")
     lines = [date_str, target_kr, "관련 뉴스"]
 
@@ -466,10 +483,46 @@ def extract_numbers(filename):
     return 0, 0
 
 def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, output_path):
-    # 장면 길이 설정 (250자 기준 읽을 수 있는 시간: 약 7~8초)
-    intro_duration = 3  # 인트로는 짧게
-    body_duration = 3   # 본문 한 장당
-    outro_duration = 2  # 아웃트로는 짧게
+    # 본문 이미지들: body_output{idx}_{page}.jpg 형식 모두 사용
+    body_images = sorted(
+        [f for f in os.listdir(body_dir) if f.startswith("body_output") and f.endswith(".jpg")],
+        key=extract_numbers
+    )
+    num_intro = 1
+    num_body = len(body_images)
+    num_outro = 1
+    total_images = num_intro + num_body + num_outro
+
+    # 기본값
+    intro_duration = 3
+    body_duration = 3
+    outro_duration = 2
+
+    # 총 길이 계산 및 조정
+    total_duration = intro_duration + body_duration * num_body + outro_duration
+    target_duration = 60
+
+    # 본문이 많을 때 자동 조정
+    if total_duration > target_duration:
+        # 본문 길이 최소 2초로 조정
+        body_duration = max(2, (target_duration - 6) // num_body)
+        # 인트로/아웃트로는 2~4초 사이로 조정
+        intro_duration = min(max(2, intro_duration), 4)
+        outro_duration = min(max(2, outro_duration), 4)
+        # 다시 총 길이 계산
+        total_duration = intro_duration + body_duration * num_body + outro_duration
+        # 남은 시간 분배
+        if total_duration < target_duration:
+            remain = target_duration - (body_duration * num_body)
+            # 인트로/아웃트로에 남은 시간 분배 (최대 4초까지)
+            intro_duration = min(4, remain // 2)
+            outro_duration = min(4, remain - intro_duration)
+        # 최종 체크
+        total_duration = intro_duration + body_duration * num_body + outro_duration
+        if total_duration > target_duration:
+            # 아웃트로부터 줄임
+            diff = total_duration - target_duration
+            outro_duration = max(2, outro_duration - diff)
 
     clips = []
 
@@ -477,11 +530,7 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
     intro_clip = ImageClip(intro_path).set_duration(intro_duration)
     clips.append(intro_clip)
 
-    # 본문 이미지들: body_output{idx}_{page}.jpg 형식 모두 사용
-    body_images = sorted(
-        [f for f in os.listdir(body_dir) if f.startswith("body_output") and f.endswith(".jpg")],
-        key=extract_numbers
-    )
+    # 2. 본문 이미지들
     for img_file in body_images:
         img_path = os.path.join(body_dir, img_file)
         body_clip = ImageClip(img_path).set_duration(body_duration)
@@ -492,7 +541,6 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
     clips.append(outro_clip)
 
     # 4. 세로(9:16) 유튜브 쇼츠 사이즈 맞추기
-    # moviepy에서 ImageClip은 원본 비율 유지, 필요시 resize와 margin 적용 가능
     clips = [clip.resize(height=1920).resize(width=1080) for clip in clips]
 
     # 5. 영상 합치기
