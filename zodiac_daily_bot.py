@@ -29,8 +29,7 @@ import random
 
 load_dotenv()
 
-
-
+os.environ["IMAGEMAGICK_BINARY"] = "/usr/bin/convert"
 YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
 timestamps = {}
