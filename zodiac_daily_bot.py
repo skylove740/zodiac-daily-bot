@@ -801,7 +801,7 @@ def run_daily_pipeline_news():
         # )
 
         create_news_shorts_video_with_bgvideo(
-            "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, "테슬라"
+            "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="테슬라"
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
