@@ -556,11 +556,23 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
 
 # ===== 텍스트 이미지 생성 함수 =====
 def create_caption_image(text, output_path, size=(1080, 1920), font_path=None, font_size=50):
-    img = Image.new("RGBA", size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+    img = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))  # 완전 투명한 배경
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    # 이미지의 높이 가져오기
+    image_width, image_height = img.size
+
+    max_text_height = image_height * 0.5
+    font_size = 10
 
     if font_path:
-        font = ImageFont.truetype(font_path, font_size)
+        while True:
+            font = ImageFont.truetype(font_path, font_size)
+            w, h = draw.textsize(text, font=font)
+            if h >= max_text_height or font_size > 200:
+                break
+            font_size += 2
+        
     else:
         font = ImageFont.load_default()
 
@@ -584,7 +596,7 @@ def create_caption_image(text, output_path, size=(1080, 1920), font_path=None, f
         box_x + box_width,
         box_y + box_height
     )
-    draw.rectangle(box_coords, fill=(0, 0, 0, 180))
+    draw.rectangle(box_coords, fill=(0, 0, 0, 150))
 
     # 텍스트 중앙 정렬
     y_text = box_y + 20
