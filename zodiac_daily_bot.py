@@ -25,6 +25,7 @@ from bs4 import BeautifulSoup
 import textwrap
 import glob
 import random
+import numpy as np
 
 
 load_dotenv()
