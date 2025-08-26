@@ -691,69 +691,79 @@ def create_caption_image_array(text, size=(1080, 1920), font_path=None):
     # PIL -> Numpy Array (MoviePy ImageClip 사용 가능)
     return np.array(img)
 
-# ===== 본 영상 생성 함수 (개선판) =====
+# ===== 본 영상 생성 함수 (개선판, summary별 다른 배경 영상 + 번호 붙이기) =====
 def create_news_shorts_video_with_bgvideo_fast(
     target_en, summaries, bg_dir, out_dir, bgm_path, output_path,
     duration_per_caption=3, target_kr="테슬라", font_path=None
 ):
-    # 배경 영상 선택
+    # 1. 배경 영상 후보
     video_candidates = [f for f in os.listdir(bg_dir) if f.endswith(".mp4")]
-    selected_videos = [f for f in video_candidates if target_en.lower() in f.lower()]
-    if not selected_videos:
-        selected_videos = [f for f in video_candidates if f.startswith("business")]
-    if not selected_videos:
-        raise FileNotFoundError("적절한 배경 영상(mp4)이 backgrounds 폴더에 없습니다.")
-    bg_video_path = os.path.join(bg_dir, random.choice(selected_videos))
+    target_videos = [f for f in video_candidates if target_en.lower() in f.lower()]
+    business_videos = [f for f in video_candidates if f.startswith("business")]
 
-    # intro/outro
-    intro_img_path = os.path.join(bg_dir, f"intro_bg_{target_en.split(' ')[0]}.png")
+    if not target_videos and not business_videos:
+        raise FileNotFoundError("적절한 배경 영상(mp4)이 backgrounds 폴더에 없습니다.")
+
+    # summary 수 만큼 배경 영상 리스트 생성
+    bg_video_list = []
+    for i in range(len(summaries)):
+        if i < len(target_videos):
+            bg_video_list.append(os.path.join(bg_dir, target_videos[i]))
+        else:
+            bg_video_list.append(os.path.join(bg_dir, random.choice(business_videos)))
+
+    # 2. intro/outro 이미지
+    create_intro_image_news(target_en, target_kr)
+    intro_img_path = OUTPUT_INTRO
     if not os.path.exists(intro_img_path):
         intro_img_path = os.path.join(bg_dir, "intro_bg_tesla.png")
     outro_img_path = os.path.join(bg_dir, "outro_bg.png")
 
     clips = []
 
-    # 1. 인트로
+    # 3. 인트로
     intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080,1920))
     clips.append(intro_clip)
 
-    # 2. 본문
-    bg_video = VideoFileClip(bg_video_path).resize((1080,1920))
-    sentences = []
-    for summary in summaries:
-        sentences += split_korean_sentences(summary)  # 기존 함수 사용
+    # 4. 본문
+    for idx, summary in enumerate(summaries):
+        # summary 앞에 순서 번호 붙이기
+        numbered_summary = f"{idx+1}. {summary}"
 
-    total_caption = len(sentences)
-    remain = 60 - 3 - 2
-    per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
+        sentences = split_korean_sentences(numbered_summary)
+        bg_video = VideoFileClip(bg_video_list[idx]).resize((1080,1920))
 
-    start_time = 0
-    for sent in sentences:
-        caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=FONT_PATH)
-        caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
+        total_caption = len(sentences)
+        remain = 60 - 3 - 2  # intro/outro
+        per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
 
-        # 배경 구간 추출
-        if start_time + per_caption > bg_video.duration:
-            start_time = 0
-        bg_clip = bg_video.subclip(start_time, start_time + per_caption)
-        start_time += per_caption
+        start_time = 0
+        for sent in sentences:
+            caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
+            caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
 
-        comp_clip = CompositeVideoClip([bg_clip, caption_clip])
-        clips.append(comp_clip)
+            # 배경 구간 추출 (loop)
+            if start_time + per_caption > bg_video.duration:
+                start_time = 0
+            bg_clip = bg_video.subclip(start_time, start_time + per_caption)
+            start_time += per_caption
 
-    # 3. 아웃트로
+            comp_clip = CompositeVideoClip([bg_clip, caption_clip])
+            clips.append(comp_clip)
+
+    # 5. 아웃트로
     outro_clip = ImageClip(outro_img_path).set_duration(2).resize((1080,1920))
     clips.append(outro_clip)
 
-    # 합성
+    # 6. 합성
     final_clip = concatenate_videoclips(clips, method="compose")
 
-    # 배경음악
+    # 7. 배경음악
     if bgm_path and os.path.exists(bgm_path):
         bgm = AudioFileClip(bgm_path).volumex(0.5)
         final_clip = final_clip.set_audio(bgm.set_duration(final_clip.duration))
 
-    # 저장
+    # 8. 저장
     final_clip.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
 
 
