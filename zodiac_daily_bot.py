@@ -728,7 +728,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
     start_time = 0
     for sent in sentences:
-        caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
+        caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=FONT_PATH)
         caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
 
         # 배경 구간 추출
@@ -837,7 +837,7 @@ def run_daily_pipeline_news():
         # )
 
         create_news_shorts_video_with_bgvideo_fast(
-            "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="테슬라"
+            "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="테슬라", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
