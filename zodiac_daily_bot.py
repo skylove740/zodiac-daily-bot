@@ -754,7 +754,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
     # 저장
     final_clip.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
-    
+
 
 # ============================ 유튭 업로드 ===========================
 def upload_video_to_youtube_news(video_path, target_kr):
@@ -836,7 +836,7 @@ def run_daily_pipeline_news():
         #     output_path=os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4")
         # )
 
-        create_news_shorts_video_with_bgvideo(
+        create_news_shorts_video_with_bgvideo_fast(
             "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="테슬라"
         )
 
