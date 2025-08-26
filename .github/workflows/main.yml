@@ -32,19 +32,15 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-      - name: Patch ImageMagick Security Policy (all locations)
+      - name: Remove ImageMagick Security Policy Lines (force delete)
         run: |
-          if [ -f /etc/ImageMagick-6/policy.xml ]; then
-            sudo sed -i 's/<policy domain="coder" rights="none" pattern="LABEL" \/>//g' /etc/ImageMagick-6/policy.xml
-            sudo sed -i 's/<policy domain="path" rights="none" pattern="@" \/>//g' /etc/ImageMagick-6/policy.xml
-            sudo sed -i 's/<policy domain="coder" rights="none" pattern="TEXT" \/>//g' /etc/ImageMagick-6/policy.xml
-          fi
-          if [ -f /etc/ImageMagick/policy.xml ]; then
-            sudo sed -i 's/<policy domain="coder" rights="none" pattern="LABEL" \/>//g' /etc/ImageMagick/policy.xml
-            sudo sed -i 's/<policy domain="path" rights="none" pattern="@" \/>//g' /etc/ImageMagick/policy.xml
-            sudo sed -i 's/<policy domain="coder" rights="none" pattern="TEXT" \/>//g' /etc/ImageMagick/policy.xml
-          fi
-          
+          sudo sed -i '/pattern="LABEL"/d' /etc/ImageMagick-6/policy.xml || true
+          sudo sed -i '/pattern="TEXT"/d' /etc/ImageMagick-6/policy.xml || true
+          sudo sed -i '/pattern="@"/d' /etc/ImageMagick-6/policy.xml || true
+          sudo sed -i '/pattern="LABEL"/d' /etc/ImageMagick/policy.xml || true
+          sudo sed -i '/pattern="TEXT"/d' /etc/ImageMagick/policy.xml || true
+          sudo sed -i '/pattern="@"/d' /etc/ImageMagick/policy.xml || true
+
       - name: Check ImageMagick Policy
         run: |
           cat /etc/ImageMagick-6/policy.xml || true
