@@ -556,98 +556,146 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
 
 # ===== 텍스트 이미지 생성 함수 =====
 def create_caption_image(text, output_path, size=(1080, 1920), font_path=None, font_size=50):
-    img = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))  # 완전 투명한 배경
-    draw = ImageDraw.Draw(img, "RGBA")
+    """
+    반투명 박스 + 중앙 텍스트 PNG 이미지 생성
+    """
+    img = Image.new("RGBA", size, (0, 0, 0, 0))  # 완전 투명 배경
+    draw = ImageDraw.Draw(img)
 
-    # 이미지의 높이 가져오기
+    # 이미지 크기
     image_width, image_height = img.size
 
     max_text_height = image_height * 0.4
-    max_text_width = image_width * 0.8  # 텍스트 영역 너비 제한
+    max_text_width = image_width * 0.8
 
+    # 폰트 로딩
+    font_size_init = 10
+    if font_path:
+        font_size = font_size_init
+        while True:
+            font = ImageFont.truetype(font_path, font_size)
+            # 테스트 줄바꿈
+            lines = wrap_text_by_pixel(text, font, max_text_width, draw)
+            line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
+            total_height = sum(line_heights) + 10*(len(lines)-1)
+            if total_height >= max_text_height or font_size > 200:
+                break
+            font_size += 2
+    else:
+        font = ImageFont.load_default()
+        lines = wrap_text_by_pixel(text, font, max_text_width, draw)
+        line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
+
+    spacing = 10
+    total_height = sum(line_heights) + spacing*(len(lines)-1)
+
+    # 박스 영역
+    box_width = max_text_width + 40
+    box_height = total_height + 40
+    box_x = (size[0] - box_width)//2
+    box_y = (size[1] - box_height)//2
+
+    # 반투명 박스
+    draw.rectangle(
+        (box_x, box_y, box_x + box_width, box_y + box_height),
+        fill=(0, 0, 0, 150)
+    )
+
+    # 텍스트 중앙 정렬
+    y_text = box_y + 20
+    for line, h in zip(lines, line_heights):
+        w = draw.textbbox((0, 0), line, font=font)[2]
+        x = (size[0] - w)//2
+        # 테두리 효과
+        for dx in [-1, 1]:
+            for dy in [-1, 1]:
+                draw.text((x+dx, y_text+dy), line, font=font, fill=(0,0,0,255))
+        draw.text((x, y_text), line, font=font, fill=(255,255,255,255))
+        y_text += h + spacing
+
+    # PNG로 저장 (반투명 유지)
+    img.save(output_path, format="PNG")
+
+
+# ===== 픽셀 기반 줄바꿈 =====
+def wrap_text_by_pixel(text, font, max_width, draw):
+    words = text.split()
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        if draw.textlength(test_line, font=font) <= max_width:
+            current_line = test_line
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
+# ===== 메모리 기반 캡션 이미지 생성 =====
+def create_caption_image_array(text, size=(1080, 1920), font_path=None):
+    img = Image.new("RGBA", size, (0,0,0,0))
+    draw = ImageDraw.Draw(img)
+
+    image_width, image_height = img.size
+    max_text_height = image_height * 0.4
+    max_text_width = image_width * 0.8
+
+    # 폰트 로딩
     font_size = 10
-
     if font_path:
         while True:
             font = ImageFont.truetype(font_path, font_size)
-            # 임시 줄바꿈 적용 후 실제 너비 측정
-            test_wrapped = textwrap.fill(text, width=30)  # 초기값
-            lines = test_wrapped.split("\n")
-            line_widths = [draw.textbbox((0, 0), line, font=font)[2] for line in lines]
-            line_heights = [draw.textbbox((0, 0), line, font=font)[3] for line in lines]
-            total_height = sum(line_heights) + 10 * (len(lines) - 1)
-            max_width = max(line_widths)
-
+            lines = wrap_text_by_pixel(text, font, max_text_width, draw)
+            line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
+            total_height = sum(line_heights) + 10*(len(lines)-1)
+            max_width = max([draw.textlength(line, font=font) for line in lines])
             if total_height >= max_text_height or max_width >= max_text_width or font_size > 200:
                 break
             font_size += 2
     else:
         font = ImageFont.load_default()
+        lines = wrap_text_by_pixel(text, font, max_text_width, draw)
+        line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
 
-
-    # 최종 줄바꿈: 폰트 사이즈와 너비 기준 자동 계산
-    # 예상 평균 글자 너비 → 이미지 너비의 80% / 글자당 너비 추정값
-    avg_char_width = font.getlength("가")  # 한글 기준
-    max_chars_per_line = int((max_text_width) / avg_char_width)
-
-    wrapped = textwrap.fill(text, width=max_chars_per_line)
-    lines = wrapped.split("\n")
     spacing = 10
-    line_heights = [draw.textbbox((0, 0), line, font=font)[3] for line in lines]
-    total_height = sum(line_heights) + spacing * (len(lines) - 1)
+    total_height = sum(line_heights) + spacing*(len(lines)-1)
 
+    # 박스 영역
     box_width = max_text_width + 40
     box_height = total_height + 40
-    box_x = (size[0] - box_width) // 2
-    box_y = (size[1] - box_height) // 2
+    box_x = (size[0] - box_width)//2
+    box_y = (size[1] - box_height)//2
 
-    # 4. ✅ 반투명 박스는 별도 레이어에 그림
-    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
-    overlay_draw = ImageDraw.Draw(overlay)
-    box_coords = (
-        box_x,
-        box_y,
-        box_x + box_width,
-        box_y + box_height
+    # 반투명 박스
+    draw.rectangle(
+        (box_x, box_y, box_x + box_width, box_y + box_height),
+        fill=(0,0,0,150)
     )
-    overlay_draw.rectangle(box_coords, fill=(0, 0, 0, 150))  # 반투명 검정 박스
-    img.alpha_composite(overlay)
 
-    # 5. 텍스트 중앙 정렬 + 테두리 포함
-    draw = ImageDraw.Draw(img)
+    # 텍스트 중앙 정렬
     y_text = box_y + 20
     for line, h in zip(lines, line_heights):
-        w = draw.textbbox((0, 0), line, font=font)[2]
-        x = (size[0] - w) // 2
+        w = draw.textbbox((0,0), line, font=font)[2]
+        x = (size[0]-w)//2
         # 테두리
-        for dx in [-1, 1]:
-            for dy in [-1, 1]:
-                draw.text((x + dx, y_text + dy), line, font=font, fill="black")
-        draw.text((x, y_text), line, font=font, fill="white")
+        for dx in [-1,1]:
+            for dy in [-1,1]:
+                draw.text((x+dx, y_text+dy), line, font=font, fill=(0,0,0,255))
+        draw.text((x, y_text), line, font=font, fill=(255,255,255,255))
         y_text += h + spacing
 
-    # 6. 저장
-    img.convert("RGB").save(output_path)
+    # PIL -> Numpy Array (MoviePy ImageClip 사용 가능)
+    return np.array(img)
 
-def cleanup_temp_images(out_dir, prefix="caption_"):
-    pattern = os.path.join(out_dir, f"{prefix}*.png")
-    for f in glob.glob(pattern):
-        try:
-            os.remove(f)
-        except Exception as e:
-            print(f"[경고] 이미지 삭제 실패: {f} → {e}")
-
-# ===== 본 영상 생성 함수 =====
-def create_news_shorts_video_with_bgvideo(
-    target_en, summaries, bg_dir, out_dir, bgm_path, output_path, duration_per_caption=3, target_kr="테슬라"
+# ===== 본 영상 생성 함수 (개선판) =====
+def create_news_shorts_video_with_bgvideo_fast(
+    target_en, summaries, bg_dir, out_dir, bgm_path, output_path,
+    duration_per_caption=3, target_kr="테슬라", font_path=None
 ):
-    """
-    backgrounds 폴더 내 mp4 영상들을 배경으로 사용.
-    target_en을 포함한 mp4 우선, 없으면 business_로 시작하는 mp4 랜덤 선택.
-    각 summary를 자막처럼 반투명 검은 박스+흰색 글씨로 영상 중앙에 띄움.
-    Intro/Outro는 기존 이미지 사용.
-    """
-    # 배경 영상 후보 리스트
+    # 배경 영상 선택
     video_candidates = [f for f in os.listdir(bg_dir) if f.endswith(".mp4")]
     selected_videos = [f for f in video_candidates if target_en.lower() in f.lower()]
     if not selected_videos:
@@ -656,44 +704,34 @@ def create_news_shorts_video_with_bgvideo(
         raise FileNotFoundError("적절한 배경 영상(mp4)이 backgrounds 폴더에 없습니다.")
     bg_video_path = os.path.join(bg_dir, random.choice(selected_videos))
 
-    create_intro_image_news(target_en, target_kr)
-    
-    # intro_img = os.path.join(bg_dir, f"intro_bg_{target_en.split(' ')[0]}.png")
-    intro_img = OUTPUT_INTRO
-    if not os.path.exists(intro_img):
-        intro_img = os.path.join(bg_dir, "intro_bg_tesla.png")
-    outro_img = os.path.join(bg_dir, "outro_bg.png")
+    # intro/outro
+    intro_img_path = os.path.join(bg_dir, f"intro_bg_{target_en.split(' ')[0]}.png")
+    if not os.path.exists(intro_img_path):
+        intro_img_path = os.path.join(bg_dir, "intro_bg_tesla.png")
+    outro_img_path = os.path.join(bg_dir, "outro_bg.png")
 
     clips = []
 
     # 1. 인트로
-    intro_clip = ImageClip(intro_img).set_duration(3).resize(height=1920).resize(width=1080)
+    intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080,1920))
     clips.append(intro_clip)
 
-    # 2. 본문 영상
-    bg_video = VideoFileClip(bg_video_path).resize(height=1920).resize(width=1080)
+    # 2. 본문
+    bg_video = VideoFileClip(bg_video_path).resize((1080,1920))
     sentences = []
     for summary in summaries:
-        sentences += split_korean_sentences(summary)
+        sentences += split_korean_sentences(summary)  # 기존 함수 사용
 
     total_caption = len(sentences)
-    remain = 60 - 3 - 2  # intro/outro
+    remain = 60 - 3 - 2
     per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
 
     start_time = 0
-    for idx, sent in enumerate(sentences):
-        # 텍스트 이미지 생성
-        temp_txt_img = os.path.join(out_dir, f"caption_{idx}.png")
-        create_caption_image(
-            sent,
-            output_path=temp_txt_img,
-            size=(1080, 1920),
-            font_path=FONT_PATH,
-            font_size=50
-        )
-        caption_clip = ImageClip(temp_txt_img).set_duration(per_caption)
+    for sent in sentences:
+        caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
+        caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
 
-        # 배경 구간 추출 (loop)
+        # 배경 구간 추출
         if start_time + per_caption > bg_video.duration:
             start_time = 0
         bg_clip = bg_video.subclip(start_time, start_time + per_caption)
@@ -703,22 +741,20 @@ def create_news_shorts_video_with_bgvideo(
         clips.append(comp_clip)
 
     # 3. 아웃트로
-    outro_clip = ImageClip(outro_img).set_duration(2).resize(height=1920).resize(width=1080)
+    outro_clip = ImageClip(outro_img_path).set_duration(2).resize((1080,1920))
     clips.append(outro_clip)
 
+    # 합성
     final_clip = concatenate_videoclips(clips, method="compose")
 
-    # 배경음악 삽입
+    # 배경음악
     if bgm_path and os.path.exists(bgm_path):
         bgm = AudioFileClip(bgm_path).volumex(0.5)
         final_clip = final_clip.set_audio(bgm.set_duration(final_clip.duration))
 
     # 저장
     final_clip.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
-
-    # 정리
-    cleanup_temp_images(out_dir)
-
+    
 
 # ============================ 유튭 업로드 ===========================
 def upload_video_to_youtube_news(video_path, target_kr):
