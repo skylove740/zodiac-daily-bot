@@ -15,3 +15,4 @@ pytz
 feedparser
 newsdataapi
 bs4
+numpy
