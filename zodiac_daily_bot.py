@@ -12,7 +12,7 @@ from flask import Flask
 import re
 import base64
 from dotenv import load_dotenv
-from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip, TextClip, CompositeVideoClip, VideoFileClip, ImageClip
+from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip, CompositeVideoClip, VideoFileClip
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -281,8 +281,8 @@ def summarize_articles(articles, target):
                     response = openai.chat.completions.create(
                         model="gpt-4.1",
                         messages=[
-                            {"role": "system", "content": "당신은 뉴스 요약 전문가입니다. "},
-                            {"role": "user", "content": "핵심 내용 위주로, 없는 사실을 지어내지 말고 요약해 주세요. 최종 출력은 한글로 번역해서 출력하세요. 다음의 요약된 기사를 한글 기준 100자 내로 다시 요약해 주세요.\n요약 기사 : " + summary}
+                            {"role": "system", "content": "당신은 경제 뉴스 요약 전문가입니다."},
+                            {"role": "user", "content": "핵심 내용 위주로, 없는 사실을 지어내지 말고 요약해 주세요. 가능한 주가와 관련 있을 만한 경제적인 내용은 요약 시에 포함시켜 주세요. 최종 출력은 한글로 번역해서 출력하세요. 다음의 요약된 기사를 한글 기준 250자 내로 다시 요약해 주세요.\n요약 기사 : " + summary}
                         ],
                         temperature=0
                         # max_tokens=300
@@ -554,7 +554,57 @@ def create_youtube_shorts_video(intro_path, body_dir, outro_path, bgm_path, outp
     # 7. 저장
     final_clip.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
 
+# ===== 텍스트 이미지 생성 함수 =====
+def create_caption_image(text, output_path, size=(1080, 1920), font_path=None, font_size=50):
+    img = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
 
+    if font_path:
+        font = ImageFont.truetype(font_path, font_size)
+    else:
+        font = ImageFont.load_default()
+
+    # 줄바꿈 자동 적용
+    wrapped = textwrap.fill(text, width=25)
+    lines = wrapped.split("\n")
+    spacing = 10
+    line_heights = [draw.textbbox((0, 0), line, font=font)[3] for line in lines]
+    total_height = sum(line_heights) + spacing * (len(lines) - 1)
+
+    # 박스 영역 계산
+    box_width = size[0] * 0.8
+    box_height = total_height + 40
+    box_x = (size[0] - box_width) // 2
+    box_y = (size[1] - box_height) // 2
+
+    # 반투명 박스
+    box_coords = (
+        box_x,
+        box_y,
+        box_x + box_width,
+        box_y + box_height
+    )
+    draw.rectangle(box_coords, fill=(0, 0, 0, 180))
+
+    # 텍스트 중앙 정렬
+    y_text = box_y + 20
+    for line, h in zip(lines, line_heights):
+        w = draw.textbbox((0, 0), line, font=font)[2]
+        x = (size[0] - w) // 2
+        draw.text((x, y_text), line, font=font, fill="white", stroke_width=2, stroke_fill="black")
+        y_text += h + spacing
+
+    img.convert("RGB").save(output_path)
+
+def cleanup_temp_images(out_dir, prefix="caption_"):
+    pattern = os.path.join(out_dir, f"{prefix}*.png")
+    for f in glob.glob(pattern):
+        try:
+            os.remove(f)
+        except Exception as e:
+            print(f"[경고] 이미지 삭제 실패: {f} → {e}")
+
+# ===== 본 영상 생성 함수 =====
 def create_news_shorts_video_with_bgvideo(
     target_en, summaries, bg_dir, out_dir, bgm_path, output_path, duration_per_caption=3
 ):
@@ -571,10 +621,8 @@ def create_news_shorts_video_with_bgvideo(
         selected_videos = [f for f in video_candidates if f.startswith("business")]
     if not selected_videos:
         raise FileNotFoundError("적절한 배경 영상(mp4)이 backgrounds 폴더에 없습니다.")
-    # 여러 개면 랜덤 선택
     bg_video_path = os.path.join(bg_dir, random.choice(selected_videos))
 
-    # 인트로/아웃트로 이미지
     intro_img = os.path.join(bg_dir, f"intro_bg_{target_en.split(' ')[0]}.png")
     if not os.path.exists(intro_img):
         intro_img = os.path.join(bg_dir, "intro_bg_tesla.png")
@@ -582,52 +630,46 @@ def create_news_shorts_video_with_bgvideo(
 
     clips = []
 
-    # 1. 인트로 이미지
+    # 1. 인트로
     intro_clip = ImageClip(intro_img).set_duration(3).resize(height=1920).resize(width=1080)
     clips.append(intro_clip)
 
-    # 2. 본문 자막+배경 영상
+    # 2. 본문 영상
     bg_video = VideoFileClip(bg_video_path).resize(height=1920).resize(width=1080)
     sentences = []
     for summary in summaries:
         sentences += split_korean_sentences(summary)
-    # 전체 자막 개수에 따라 duration 자동 조정
+
     total_caption = len(sentences)
-    remain = 60 - 3 - 2  # intro+outro
+    remain = 60 - 3 - 2  # intro/outro
     per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
 
     start_time = 0
-    for sent in sentences:
-        # 자막 스타일: 반투명 검은 박스 + 흰색 글씨
-        txt_clip = TextClip(
+    for idx, sent in enumerate(sentences):
+        # 텍스트 이미지 생성
+        temp_txt_img = os.path.join(out_dir, f"caption_{idx}.png")
+        create_caption_image(
             sent,
-            fontsize=50,
-            font=FONT_PATH,
-            color='white',
-            stroke_color='black',
-            stroke_width=2,
-            method='caption',
-            size=(900, None),
-            align='center'
-        ).set_position(('center', 'center')).set_duration(per_caption)
-        # 반투명 박스
-        box = TextClip(
-            " " * 30, fontsize=50, font=FONT_PATH, size=(900, 120),
-            color='white', bg_color=(0,0,0,150)
-        ).set_position(('center', 'center')).set_duration(per_caption)
-        # 배경 영상에서 해당 구간 추출 (loop if 부족)
+            output_path=temp_txt_img,
+            size=(1080, 1920),
+            font_path=FONT_PATH,
+            font_size=50
+        )
+        caption_clip = ImageClip(temp_txt_img).set_duration(per_caption)
+
+        # 배경 구간 추출 (loop)
         if start_time + per_caption > bg_video.duration:
-            start_time = 0  # loop
+            start_time = 0
         bg_clip = bg_video.subclip(start_time, start_time + per_caption)
         start_time += per_caption
-        comp_clip = CompositeVideoClip([bg_clip, box, txt_clip])
+
+        comp_clip = CompositeVideoClip([bg_clip, caption_clip])
         clips.append(comp_clip)
 
-    # 3. 아웃트로 이미지
+    # 3. 아웃트로
     outro_clip = ImageClip(outro_img).set_duration(2).resize(height=1920).resize(width=1080)
     clips.append(outro_clip)
 
-    # 최종 영상 합치기
     final_clip = concatenate_videoclips(clips, method="compose")
 
     # 배경음악 삽입
@@ -637,6 +679,9 @@ def create_news_shorts_video_with_bgvideo(
 
     # 저장
     final_clip.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
+
+    # 정리
+    cleanup_temp_images(out_dir)
 
 
 # ============================ 유튭 업로드 ===========================
