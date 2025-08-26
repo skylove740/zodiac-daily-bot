@@ -1413,18 +1413,18 @@ def run_daily_pipeline():
     # # 🎬 여기서 영상으로 변환!
     # video_path = create_daily_video_from_images()
 
-    # # base64 문자열 가져오기
-    # token_b64 = os.getenv("TOKEN_JSON_BASE64")
-    # with open("token.json", "wb") as f:
-    #     f.write(base64.b64decode(token_b64))
+    # base64 문자열 가져오기
+    token_b64 = os.getenv("TOKEN_JSON_BASE64")
+    with open("token.json", "wb") as f:
+        f.write(base64.b64decode(token_b64))
 
-    # # 디코딩 후 token.json로 저장
-    # if token_b64:
-    #     with open("token.json", "wb") as f:
-    #         f.write(base64.b64decode(token_b64))
-    #     print("token.json 파일 복원 완료.")
-    # else:
-    #     print("TOKEN_JSON_BASE64 환경변수가 설정되지 않았습니다.")
+    # 디코딩 후 token.json로 저장
+    if token_b64:
+        with open("token.json", "wb") as f:
+            f.write(base64.b64decode(token_b64))
+        print("token.json 파일 복원 완료.")
+    else:
+        print("TOKEN_JSON_BASE64 환경변수가 설정되지 않았습니다.")
 
     # # ⏭️ 다음 단계: YouTube 업로드
     # upload_video_to_youtube(video_path)
