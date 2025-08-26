@@ -725,6 +725,9 @@ def create_news_shorts_video_with_bgvideo_fast(
     intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080,1920))
     clips.append(intro_clip)
 
+    # 이전 start_time 초기화 제거
+    start_time = 0  # 전체 sentences 기준 누적 시간
+
     # 4. 본문
     for idx, summary in enumerate(summaries):
         # summary 앞에 순서 번호 붙이기
@@ -737,14 +740,14 @@ def create_news_shorts_video_with_bgvideo_fast(
         remain = 60 - 3 - 2  # intro/outro
         per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
 
-        start_time = 0
         for sent in sentences:
             caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
             caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
 
-            # 배경 구간 추출 (loop)
+            # 배경 구간 추출: 누적 시간 기준
             if start_time + per_caption > bg_video.duration:
                 start_time = 0
+            
             bg_clip = bg_video.subclip(start_time, start_time + per_caption)
             start_time += per_caption
 
@@ -819,9 +822,8 @@ def upload_video_to_youtube_news(video_path, target_kr):
         except Exception as e:
             print(f"token.json 삭제 중 오류 발생: {e}")
 
-    # FOR TEST
-    # elif target_kr == "테슬라":
-        # run_daily_pipeline_news_jovy()
+    elif target_kr == "테슬라":
+        run_daily_pipeline_news_jovy()
 
 def run_daily_pipeline_news():
     print("🚀 테슬라 뉴스 요약 쇼츠 생성 시작")
@@ -853,9 +855,8 @@ def run_daily_pipeline_news():
 
         # ⏭️ 다음 단계: YouTube 업로드
         upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), "테슬라")
-    # else:
-        # FOR TEST
-        # run_daily_pipeline_news_jovy()
+    else:
+        run_daily_pipeline_news_jovy()
 
 def run_daily_pipeline_news_jovy():
     print("🚀 조비 뉴스 요약 쇼츠 생성 시작")
@@ -1474,27 +1475,26 @@ def upload_video_to_youtube(video_path):
 
 
 def run_daily_pipeline():
-    # FOR TEST
-    # print("🚀 띠별 운세 생성 시작")
-    # create_intro_image()  # 맨 앞장 이미지 생성
-    # generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
+    print("🚀 띠별 운세 생성 시작")
+    create_intro_image()  # 맨 앞장 이미지 생성
+    generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
 
-    # fortunes = get_daily_fortunes()
-    # for zodiac in ZODIACS:
-    #     text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
-    #     text = clean_fortune_text(text)
-    #     insert_fortune_text(zodiac, text)
-    #     image_path = os.path.join(OUT_DIR, f"{zodiac}_운세.png")
-    #     generated_images.append(image_path)
+    fortunes = get_daily_fortunes()
+    for zodiac in ZODIACS:
+        text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
+        text = clean_fortune_text(text)
+        insert_fortune_text(zodiac, text)
+        image_path = os.path.join(OUT_DIR, f"{zodiac}_운세.png")
+        generated_images.append(image_path)
 
-    # follow_image = os.path.join(BG_DIR, "follow_prompt.png")
-    # if os.path.exists(follow_image):
-    #     generated_images.append(follow_image)
+    follow_image = os.path.join(BG_DIR, "follow_prompt.png")
+    if os.path.exists(follow_image):
+        generated_images.append(follow_image)
 
-    # print("✅ 전체 이미지 생성 완료")
+    print("✅ 전체 이미지 생성 완료")
 
-    # # 🎬 여기서 영상으로 변환!
-    # video_path = create_daily_video_from_images()
+    # 🎬 여기서 영상으로 변환!
+    video_path = create_daily_video_from_images()
 
     # base64 문자열 가져오기
     token_b64 = os.getenv("TOKEN_JSON_BASE64")
@@ -1509,8 +1509,8 @@ def run_daily_pipeline():
     else:
         print("TOKEN_JSON_BASE64 환경변수가 설정되지 않았습니다.")
 
-    # # ⏭️ 다음 단계: YouTube 업로드
-    # upload_video_to_youtube(video_path)
+    # ⏭️ 다음 단계: YouTube 업로드
+    upload_video_to_youtube(video_path)
 
     ## 별자리 운세 생성
     run_daily_pipeline_star()
@@ -1558,77 +1558,73 @@ generated_images = []
 # ============================ 유튭 업로드 ===========================
 def upload_video_to_youtube_star(video_path):
     global timestamps
-    # FOR TEST
-    # creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
-    # youtube = build("youtube", "v3", credentials=creds)
+    creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
+    youtube = build("youtube", "v3", credentials=creds)
 
-    # now = datetime.now(ZoneInfo("Asia/Seoul"))
-    # date_str = now.strftime("%Y년 %m월 %d일")
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
+    date_str = now.strftime("%Y년 %m월 %d일")
 
-    # timestamp_description = "\n".join(
-    #     [f"🐾 {name}자리 운세 : {time}" for name, time in timestamps.items()])
+    timestamp_description = "\n".join(
+        [f"🐾 {name}자리 운세 : {time}" for name, time in timestamps.items()])
 
-    # body = {
-    #     "snippet": {
-    #         "title": f"{date_str} 별자리 운세 ✨",  # 영상 제목
-    #         "description":
-    #         f"{date_str} 오늘의 별자리 운세입니다.\n\n{timestamp_description}\n\n#운세 #별자리운세 #shorts",
-    #         "tags": ["운세", "별자리운세", "오늘의운세", "shorts"],
-    #         "categoryId": "22"  # People & Blogs
-    #     },
-    #     "status": {
-    #         "privacyStatus": "public"  # 또는 unlisted, private
-    #     }
-    # }
+    body = {
+        "snippet": {
+            "title": f"{date_str} 별자리 운세 ✨",  # 영상 제목
+            "description":
+            f"{date_str} 오늘의 별자리 운세입니다.\n\n{timestamp_description}\n\n#운세 #별자리운세 #shorts",
+            "tags": ["운세", "별자리운세", "오늘의운세", "shorts"],
+            "categoryId": "22"  # People & Blogs
+        },
+        "status": {
+            "privacyStatus": "public"  # 또는 unlisted, private
+        }
+    }
 
-    # media = MediaFileUpload(video_path,
-    #                         chunksize=-1,
-    #                         resumable=True,
-    #                         mimetype="video/*")
+    media = MediaFileUpload(video_path,
+                            chunksize=-1,
+                            resumable=True,
+                            mimetype="video/*")
 
-    # print("📤 유튜브 업로드 시작...")
-    # request = youtube.videos().insert(part="snippet,status",
-    #                                   body=body,
-    #                                   media_body=media)
-    # response = None
+    print("📤 유튜브 업로드 시작...")
+    request = youtube.videos().insert(part="snippet,status",
+                                      body=body,
+                                      media_body=media)
+    response = None
 
-    # while response is None:
-    #     status, response = request.next_chunk()
-    #     if status:
-    #         print(f"🔄 업로드 진행: {int(status.progress() * 100)}%")
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            print(f"🔄 업로드 진행: {int(status.progress() * 100)}%")
 
-    # print(f"✅ 업로드 완료! YouTube Video ID: {response.get('id')}")
+    print(f"✅ 업로드 완료! YouTube Video ID: {response.get('id')}")
 
     run_daily_pipeline_news()
 
 
 def run_daily_pipeline_star():
     print("🚀 별자리 운세 생성 시작")
-    # FOR TEST
-    # create_star_intro_image()  # 맨 앞장 이미지 생성
-    # generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
+    create_star_intro_image()  # 맨 앞장 이미지 생성
+    generated_images.append(os.path.join(OUT_DIR, "0_intro.png"))
 
-    # fortunes = get_daily_star_fortunes()
-    # for zodiac in ZODIACS_star:
-    #     text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
-    #     text = clean_fortune_text_star(text)
-    #     insert_fortune_text_star(zodiac, text)
-    #     image_path = os.path.join(OUT_DIR, f"{zodiac}자리_운세.png")
-    #     generated_images.append(image_path)
+    fortunes = get_daily_star_fortunes()
+    for zodiac in ZODIACS_star:
+        text = fortunes.get(zodiac, "오늘도 행복한 하루 보내세요!")
+        text = clean_fortune_text_star(text)
+        insert_fortune_text_star(zodiac, text)
+        image_path = os.path.join(OUT_DIR, f"{zodiac}자리_운세.png")
+        generated_images.append(image_path)
 
-    # follow_image = os.path.join(BG_DIR, "follow_prompt.png")
-    # if os.path.exists(follow_image):
-    #     generated_images.append(follow_image)
+    follow_image = os.path.join(BG_DIR, "follow_prompt.png")
+    if os.path.exists(follow_image):
+        generated_images.append(follow_image)
 
-    # print("✅ 전체 이미지 생성 완료")
+    print("✅ 전체 이미지 생성 완료")
 
-    # # 🎬 여기서 영상으로 변환!
-    # video_path = create_daily_video_from_images_star()
+    # 🎬 여기서 영상으로 변환!
+    video_path = create_daily_video_from_images_star()
 
-    # # ⏭️ 다음 단계: YouTube 업로드
-    # upload_video_to_youtube_star(video_path)
-
-    upload_video_to_youtube_star("")  # FOR TEST
+    # ⏭️ 다음 단계: YouTube 업로드
+    upload_video_to_youtube_star(video_path)
 
 
 
