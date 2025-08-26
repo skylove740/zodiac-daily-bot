@@ -562,50 +562,71 @@ def create_caption_image(text, output_path, size=(1080, 1920), font_path=None, f
     # 이미지의 높이 가져오기
     image_width, image_height = img.size
 
-    max_text_height = image_height * 0.5
+    max_text_height = image_height * 0.4
+    max_text_width = image_width * 0.8  # 텍스트 영역 너비 제한
+
     font_size = 10
 
     if font_path:
         while True:
             font = ImageFont.truetype(font_path, font_size)
-            w, h = draw.textsize(text, font=font)
-            if h >= max_text_height or font_size > 200:
+            # 임시 줄바꿈 적용 후 실제 너비 측정
+            test_wrapped = textwrap.fill(text, width=30)  # 초기값
+            lines = test_wrapped.split("\n")
+            line_widths = [draw.textbbox((0, 0), line, font=font)[2] for line in lines]
+            line_heights = [draw.textbbox((0, 0), line, font=font)[3] for line in lines]
+            total_height = sum(line_heights) + 10 * (len(lines) - 1)
+            max_width = max(line_widths)
+
+            if total_height >= max_text_height or max_width >= max_text_width or font_size > 200:
                 break
             font_size += 2
-        
     else:
         font = ImageFont.load_default()
 
-    # 줄바꿈 자동 적용
-    wrapped = textwrap.fill(text, width=25)
+
+    # 최종 줄바꿈: 폰트 사이즈와 너비 기준 자동 계산
+    # 예상 평균 글자 너비 → 이미지 너비의 80% / 글자당 너비 추정값
+    avg_char_width = font.getlength("가")  # 한글 기준
+    max_chars_per_line = int((max_text_width) / avg_char_width)
+
+    wrapped = textwrap.fill(text, width=max_chars_per_line)
     lines = wrapped.split("\n")
     spacing = 10
     line_heights = [draw.textbbox((0, 0), line, font=font)[3] for line in lines]
     total_height = sum(line_heights) + spacing * (len(lines) - 1)
 
-    # 박스 영역 계산
-    box_width = size[0] * 0.8
+    box_width = max_text_width + 40
     box_height = total_height + 40
     box_x = (size[0] - box_width) // 2
     box_y = (size[1] - box_height) // 2
 
-    # 반투명 박스
+    # 4. ✅ 반투명 박스는 별도 레이어에 그림
+    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
     box_coords = (
         box_x,
         box_y,
         box_x + box_width,
         box_y + box_height
     )
-    draw.rectangle(box_coords, fill=(0, 0, 0, 150))
+    overlay_draw.rectangle(box_coords, fill=(0, 0, 0, 150))  # 반투명 검정 박스
+    img.alpha_composite(overlay)
 
-    # 텍스트 중앙 정렬
+    # 5. 텍스트 중앙 정렬 + 테두리 포함
+    draw = ImageDraw.Draw(img)
     y_text = box_y + 20
     for line, h in zip(lines, line_heights):
         w = draw.textbbox((0, 0), line, font=font)[2]
         x = (size[0] - w) // 2
-        draw.text((x, y_text), line, font=font, fill="white", stroke_width=2, stroke_fill="black")
+        # 테두리
+        for dx in [-1, 1]:
+            for dy in [-1, 1]:
+                draw.text((x + dx, y_text + dy), line, font=font, fill="black")
+        draw.text((x, y_text), line, font=font, fill="white")
         y_text += h + spacing
 
+    # 6. 저장
     img.convert("RGB").save(output_path)
 
 def cleanup_temp_images(out_dir, prefix="caption_"):
@@ -618,7 +639,7 @@ def cleanup_temp_images(out_dir, prefix="caption_"):
 
 # ===== 본 영상 생성 함수 =====
 def create_news_shorts_video_with_bgvideo(
-    target_en, summaries, bg_dir, out_dir, bgm_path, output_path, duration_per_caption=3
+    target_en, summaries, bg_dir, out_dir, bgm_path, output_path, duration_per_caption=3, target_kr="테슬라"
 ):
     """
     backgrounds 폴더 내 mp4 영상들을 배경으로 사용.
@@ -635,7 +656,10 @@ def create_news_shorts_video_with_bgvideo(
         raise FileNotFoundError("적절한 배경 영상(mp4)이 backgrounds 폴더에 없습니다.")
     bg_video_path = os.path.join(bg_dir, random.choice(selected_videos))
 
-    intro_img = os.path.join(bg_dir, f"intro_bg_{target_en.split(' ')[0]}.png")
+    create_intro_image_news(target_en, target_kr)
+    
+    # intro_img = os.path.join(bg_dir, f"intro_bg_{target_en.split(' ')[0]}.png")
+    intro_img = OUTPUT_INTRO
     if not os.path.exists(intro_img):
         intro_img = os.path.join(bg_dir, "intro_bg_tesla.png")
     outro_img = os.path.join(bg_dir, "outro_bg.png")
@@ -777,7 +801,7 @@ def run_daily_pipeline_news():
         # )
 
         create_news_shorts_video_with_bgvideo(
-            "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3
+            "tesla", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, "테슬라"
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
