@@ -32,6 +32,12 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
 
+      - name: Patch ImageMagick Security Policy
+        run: |
+          sudo sed -i 's/<policy domain="coder" rights="none" pattern="LABEL" \/>//g' /etc/ImageMagick-6/policy.xml
+          sudo sed -i 's/<policy domain="path" rights="none" pattern="@" \/>//g' /etc/ImageMagick-6/policy.xml
+          sudo sed -i 's/<policy domain="coder" rights="none" pattern="TEXT" \/>//g' /etc/ImageMagick-6/policy.xml
+
       - name: Run bot script
         run: python zodiac_daily_bot.py
         env:
