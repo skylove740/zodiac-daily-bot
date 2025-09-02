@@ -343,5 +343,75 @@
         "source_name": "The Hacker News",
         "attribute": "class",
         "value": "articlebody clear cf"
+    },
+    {
+        "source_name": "Apnews",
+        "attribute": "class",
+        "value": "RichTextStoryBody RichTextBody"
+    },
+    {
+        "source_name": "Barchart.com",
+        "attribute": "class",
+        "value": "ng-binding ng-isolate-scope"
+    },
+    {
+        "source_name": "Nbc10 Philadelphia",
+        "attribute": "class",
+        "value": "article-content rich-text"
+    },
+    {
+        "source_name": "Slashgear",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Al Jazeera",
+        "attribute": "id",
+        "value": "main-content-area"
+    },
+    {
+        "source_name": "Castanet",
+        "attribute": "class",
+        "value": "newsstory"
+    },
+    {
+        "source_name": "Insider",
+        "attribute": "class",
+        "value": "post-body-content post-story-body-content full-width-post"
+    },
+    {
+        "source_name": "Lincoln Journal Star",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Dnronline",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Fool",
+        "attribute": "class",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Tech Crunch",
+        "attribute": "class",
+        "value": "entry-content wp-block-post-content is-layout-constrained wp-block-post-content-is-layout-constrained"
+    },
+    {
+        "source_name": "Fortune",
+        "attribute": "class",
+        "value": "rawHtml-content content-sentinel"
+    },
+    {
+        "source_name": "Kgun 9",
+        "attribute": "class",
+        "value": "RichTextArticleBody-body"
+    },
+    {
+        "source_name": "Nbc News",
+        "attribute": "class",
+        "value": "article-body__content"
     }
 ]

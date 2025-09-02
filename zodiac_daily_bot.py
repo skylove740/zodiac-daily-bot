@@ -725,8 +725,11 @@ def create_news_shorts_video_with_bgvideo_fast(
     intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080,1920))
     clips.append(intro_clip)
 
-    # 이전 start_time 초기화 제거
+
     start_time = 0  # 전체 sentences 기준 누적 시간
+
+    # 💡 실제 VideoFileClip 객체를 미리 로딩
+    bg_video_clips = [VideoFileClip(os.path.join(bg_dir, f)).resize((1080, 1920)) for f in bg_video_list]
 
     # 4. 본문
     for idx, summary in enumerate(summaries):
@@ -734,22 +737,33 @@ def create_news_shorts_video_with_bgvideo_fast(
         numbered_summary = f"{idx+1}. {summary}"
 
         sentences = split_korean_sentences(numbered_summary)
-        bg_video = VideoFileClip(bg_video_list[idx]).resize((1080,1920))
+        bg_video = bg_video_clips[idx]  # ✅ 같은 객체 유지
 
-        total_caption = len(sentences)
-        remain = 60 - 3 - 2  # intro/outro
+        total_caption = len(sentences) - 1
+        remain = 60 - 3 - 2 - 2  # intro/outro/숫자 표시 시간 제외
         per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
 
         for sent in sentences:
             caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
-            caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
+            if f"{idx+1}" in sent: # 숫자 표시시간
+                caption_clip = ImageClip(caption_array, transparent=True).set_duration(2)
 
-            # 배경 구간 추출: 누적 시간 기준
-            if start_time + per_caption > bg_video.duration:
-                start_time = 0
+                # 배경 구간 추출: 누적 시간 기준
+                if start_time + 2 > bg_video.duration:
+                    start_time = 0
+
+                bg_clip = bg_video.subclip(start_time, start_time + 2)
+                start_time += 2
+
+            else:
+                caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
+
+                # 배경 구간 추출: 누적 시간 기준
+                if start_time + per_caption > bg_video.duration:
+                    start_time = 0
             
-            bg_clip = bg_video.subclip(start_time, start_time + per_caption)
-            start_time += per_caption
+                bg_clip = bg_video.subclip(start_time, start_time + per_caption)
+                start_time += per_caption
 
             comp_clip = CompositeVideoClip([bg_clip, caption_clip])
             clips.append(comp_clip)
@@ -868,18 +882,22 @@ def run_daily_pipeline_news_jovy():
 
     if len(summaries) > 0:
         create_intro_image_news("Jovy Aviation", "조비 에비에이션")
-        for idx, summary in enumerate(summaries):
-            create_body_image(summary, idx, "Jovy")
+        # for idx, summary in enumerate(summaries):
+        #     create_body_image(summary, idx, "Jovy")
         create_outro_image()
 
         date_str = datetime.now().strftime("%Y%m%d")
 
-        create_youtube_shorts_video(
-            intro_path=OUTPUT_INTRO,
-            body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
-            outro_path=OUTPUT_OUTRO,
-            bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
-            output_path=os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4")
+        # create_youtube_shorts_video(
+        #     intro_path=OUTPUT_INTRO,
+        #     body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
+        #     outro_path=OUTPUT_OUTRO,
+        #     bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
+        #     output_path=os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4")
+        # )
+
+        create_news_shorts_video_with_bgvideo_fast(
+            "Jovy", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="조비 에비에이션", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
@@ -898,18 +916,22 @@ def run_daily_pipeline_news_business():
 
     if len(summaries) > 0:
         create_intro_image_news("business", "경제")
-        for idx, summary in enumerate(summaries):
-            create_body_image(summary, idx, "business")
+        # for idx, summary in enumerate(summaries):
+        #     create_body_image(summary, idx, "business")
         create_outro_image()
 
         date_str = datetime.now().strftime("%Y%m%d")
 
-        create_youtube_shorts_video(
-            intro_path=OUTPUT_INTRO,
-            body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
-            outro_path=OUTPUT_OUTRO,
-            bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
-            output_path=os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4")
+        # create_youtube_shorts_video(
+        #     intro_path=OUTPUT_INTRO,
+        #     body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
+        #     outro_path=OUTPUT_OUTRO,
+        #     bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
+        #     output_path=os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4")
+        # )
+
+        create_news_shorts_video_with_bgvideo_fast(
+            "business", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="경제", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
