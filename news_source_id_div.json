@@ -212,7 +212,7 @@
     {
         "source_name": "Yahoo! News",
         "attribute": "class",
-        "value": "col-body"
+        "value": "caas-body"
     },
     {
         "source_name": "Google News",
@@ -413,5 +413,55 @@
         "source_name": "Nbc News",
         "attribute": "class",
         "value": "article-body__content"
+    },
+    {
+        "source_name": "Carrollspaper",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Cnbc",
+        "attribute": "class",
+        "value": "group"
+    },
+    {
+        "source_name": "Marketwatch",
+        "attribute": "class",
+        "value": "ef4qpkp0 css-11y7gop-Container e1fcbjix16"
+    },
+    {
+        "source_name": "Owensboro Messenger And Inquirer",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Wcpo",
+        "attribute": "class",
+        "value": "Page-body ArticlePage-articleBody"
+    },
+    {
+        "source_name": "Wesa",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Americanbankingnews",
+        "attribute": "class",
+        "value": "entry"
+    },
+    {
+        "source_name": "Newspressnow",
+        "attribute": "class",
+        "value": "entry__content"
+    },
+    {
+        "source_name": "Analytics And Insight",
+        "attribute": "class",
+        "value": "arr--story-page-card-wrapper"
+    },
+    {
+        "source_name": "Daily Political",
+        "attribute": "class",
+        "value": "entry"
     }
 ]
