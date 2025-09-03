@@ -298,7 +298,7 @@ def summarize_articles(articles, target):
                     model="gpt-4.1",
                     messages=[
                         {"role": "system", "content": "대답은 OK 또는 NO로만 대답하세요."},
-                        {"role": "user", "content": f"이 요약이 {target}과 직접적으로 연관 있는 기사가 정말 맞나요? {target}에 대한 최신 기준의 웹 서치 확인 후 답변해 주세요. 요약 : {summary}"}
+                        {"role": "user", "content": f"이 요약이 {target}과 직/간접적으로 관련이 있는 기사가 정말 맞나요? {target}에 대한 최신 기준의 웹 서치 확인 후 답변해 주세요. 요약 : {summary}"}
                     ],
                     temperature=0
                     # max_tokens=300
@@ -897,7 +897,7 @@ def run_daily_pipeline_news_jovy():
         # )
 
         create_news_shorts_video_with_bgvideo_fast(
-            "Jovy", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="조비 에비에이션", font_path=FONT_PATH
+            "Jovy", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_Jovy_news_shorts.mp4"), duration_per_caption=3, target_kr="조비 에비에이션", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
@@ -931,7 +931,7 @@ def run_daily_pipeline_news_business():
         # )
 
         create_news_shorts_video_with_bgvideo_fast(
-            "business", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_tesla_news_shorts.mp4"), duration_per_caption=3, target_kr="경제", font_path=FONT_PATH
+            "business", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4"), duration_per_caption=3, target_kr="경제", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
