@@ -250,7 +250,7 @@ def summarize_articles(articles, target):
     for idx, art in enumerate(articles, start=1):
         if len(summarized_results) >= 3:
             break  # 3개까지만 요약하고 반복 중지
-        article = art["content"]
+        article = clean_emoji_text(art["content"])
         try:
             # GPT에게 요청할 프롬프트
             prompt = (
@@ -307,6 +307,22 @@ def summarize_articles(articles, target):
 
                 if response.choices[0].message.content.strip().lower() != "ok":
                     print(f"[{idx}] 요약 생략: {target}과 관련 없는 기사입니다.")
+                    continue
+
+                response = openai.chat.completions.create(
+                    model="gpt-4.1",
+                    messages=[
+                        {"role": "system", "content": "대답은 OK 또는 NO로만 대답하세요."},
+                        {"role": "user", "content": f"지금 주어지는 '요약'과 중복되는 내용이 주어지는 '배열' 안에 있나요?\n'요약' : {summary}\n'배열' : {summarized_results}\n"}
+                    ],
+                    temperature=0
+                    # max_tokens=300
+                )
+
+                if response.choices[0].message.content.strip().lower() == "ok":
+                    print(f"[{idx}] 요약 생략: 중복되는 내용이 있습니다.")
+                    print(f"[{idx}] 요약 : {summary}")
+                    print("배열 : ", summarized_results)
                     continue
 
                 summarized_results.append(summary)
@@ -727,10 +743,25 @@ def create_news_shorts_video_with_bgvideo_fast(
     clips.append(intro_clip)
 
 
-    start_time = 0  # 전체 sentences 기준 누적 시간
+    # start_time = 0  # 전체 sentences 기준 누적 시간
 
     # 💡 실제 VideoFileClip 객체를 미리 로딩
     bg_video_clips = [VideoFileClip(os.path.join(bg_dir, f)).resize((1080, 1920)) for f in bg_video_list]
+    bg_video_start_times = [0] * len(summaries)  # 각 배경 영상마다의 누적 시간
+
+    intro_duration = 3
+    outro_duration = 2
+    total_max_duration = 60
+    available_caption_duration = total_max_duration - intro_duration - outro_duration
+
+    # 💡 전체 자막 수 계산
+    total_sentences = 0
+    for idx, summary in enumerate(summaries):
+        numbered_summary = f"{idx+1}. {summary}"
+        total_sentences += len(split_korean_sentences(numbered_summary))
+
+    per_caption = available_caption_duration / total_sentences
+    per_caption = max(1.5, min(4, per_caption))  # 너무 짧거나 너무 길지 않게 제한
 
     # 4. 본문
     for idx, summary in enumerate(summaries):
@@ -739,35 +770,42 @@ def create_news_shorts_video_with_bgvideo_fast(
 
         sentences = split_korean_sentences(numbered_summary)
         bg_video = bg_video_clips[idx]  # ✅ 같은 객체 유지
-
-        total_caption = len(sentences) - 1
-        remain = 60 - 3 - 2 - 2  # intro/outro/숫자 표시 시간 제외
-        per_caption = max(2, min(duration_per_caption, remain // max(1, total_caption)))
+        bg_start = bg_video_start_times[idx]  # 이 summary의 시작 시간
 
         for sent in sentences:
             caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
             if f"{idx+1}" in sent: # 숫자 표시시간
-                caption_clip = ImageClip(caption_array, transparent=True).set_duration(2)
+                caption_clip = ImageClip(caption_array, transparent=True).set_duration(1)
 
                 # 배경 구간 추출: 누적 시간 기준
-                if start_time + 2 > bg_video.duration:
-                    start_time = 0
+                # if start_time + 1 > bg_video.duration:
+                #     start_time = 0
+                # 클립 길이 넘어가면 loop
+                if bg_start + 1 > bg_video.duration:
+                    bg_start = 0
 
-                bg_clip = bg_video.subclip(start_time, start_time + 2)
-                start_time += 2
+                end_time = min(bg_start + 1, bg_video.duration - 0.1)
+                bg_clip = bg_video.subclip(bg_start, end_time)
+                bg_start = end_time
 
             else:
                 caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
 
                 # 배경 구간 추출: 누적 시간 기준
-                if start_time + per_caption > bg_video.duration:
-                    start_time = 0
+                # if start_time + per_caption > bg_video.duration:
+                #     start_time = 0
+                # 클립 길이 넘어가면 loop
+                if bg_start + per_caption > bg_video.duration:
+                    bg_start = 0
             
-                bg_clip = bg_video.subclip(start_time, start_time + per_caption)
-                start_time += per_caption
+                end_time = min(bg_start + per_caption, bg_video.duration - 0.1)
+                bg_clip = bg_video.subclip(bg_start, end_time)
+                bg_start = end_time
 
             comp_clip = CompositeVideoClip([bg_clip, caption_clip])
             clips.append(comp_clip)
+        # 이 summary의 누적 start_time 갱신
+        bg_video_start_times[idx] = bg_start
 
     # 5. 아웃트로
     outro_clip = ImageClip(outro_img_path).set_duration(2).resize((1080,1920))
@@ -1004,12 +1042,7 @@ def get_daily_fortunes():
     fortunes = dict(zip(ZODIACS, text.split("\n\n")))
     return fortunes
 
-
-def clean_fortune_text_star(text):
-    # 1. 자리 이름 제거 (문장 시작 위치에만)
-    text = re.sub(r'^([^가-힣]*[가-힣]{1,5}자리)[\s:：,.~!\-]*', r'\1 - ', text)
-
-    # 2. 이모지 제거
+def clean_emoji_text(text):
     emoji_pattern = re.compile(
         "["
         "\U0001F600-\U0001F64F"  # 이모티콘
@@ -1031,6 +1064,10 @@ def clean_fortune_text_star(text):
     return emoji_pattern.sub(r'', text).strip()
 
 
+def clean_fortune_text_star(text):
+    # 1. 자리 이름 제거 (문장 시작 위치에만)
+    text = re.sub(r'^([^가-힣]*[가-힣]{1,5}자리)[\s:：,.~!\-]*', r'\1 - ', text)
+    return clean_emoji_text(text)
 
 
 def get_daily_star_fortunes():
