@@ -940,7 +940,7 @@ def run_daily_pipeline_news_jovy():
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
-        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4"), "조비 에비에이션")
+        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_Jovy_news_shorts.mp4"), "조비 에비에이션")
     else:
         run_daily_pipeline_news_business()
 
