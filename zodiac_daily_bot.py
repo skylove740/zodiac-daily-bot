@@ -761,7 +761,7 @@ def create_news_shorts_video_with_bgvideo_fast(
         total_sentences += len(split_korean_sentences(numbered_summary))
 
     per_caption = available_caption_duration / total_sentences
-    per_caption = max(1.5, min(4, per_caption))  # 너무 짧거나 너무 길지 않게 제한
+    per_caption = max(2, min(4, per_caption))  # 너무 짧거나 너무 길지 않게 제한
 
     # 4. 본문
     for idx, summary in enumerate(summaries):
@@ -774,7 +774,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
         for sent in sentences:
             caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
-            if f"{idx+1}" in sent: # 숫자 표시시간
+            if f"{idx+1}." == sent.strip(): # 숫자 표시시간
                 caption_clip = ImageClip(caption_array, transparent=True).set_duration(1)
 
                 # 배경 구간 추출: 누적 시간 기준
@@ -784,9 +784,8 @@ def create_news_shorts_video_with_bgvideo_fast(
                 if bg_start + 1 > bg_video.duration:
                     bg_start = 0
 
-                end_time = min(bg_start + 1, bg_video.duration - 0.1)
+                end_time = min(bg_video.duration, bg_start + 1)
                 bg_clip = bg_video.subclip(bg_start, end_time)
-                bg_start = end_time
 
             else:
                 caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
@@ -794,16 +793,19 @@ def create_news_shorts_video_with_bgvideo_fast(
                 # 배경 구간 추출: 누적 시간 기준
                 # if start_time + per_caption > bg_video.duration:
                 #     start_time = 0
-                # 클립 길이 넘어가면 loop
-                if bg_start + per_caption > bg_video.duration:
-                    bg_start = 0
-            
-                end_time = min(bg_start + per_caption, bg_video.duration - 0.1)
-                bg_clip = bg_video.subclip(bg_start, end_time)
-                bg_start = end_time
+                # 클립 길이 넘어가면 화면 정지
+                end_time = bg_start + per_caption
+                if end_time > bg_video.duration:
+                    # 배경 영상의 마지막 프레임 freeze
+                    bg_clip = bg_video.to_ImageClip(t=bg_video.duration - 0.1).set_duration(per_caption)
+                else:            
+                    end_time = min(bg_video.duration, bg_start + per_caption)
+                    bg_clip = bg_video.subclip(bg_start, end_time)
 
             comp_clip = CompositeVideoClip([bg_clip, caption_clip])
             clips.append(comp_clip)
+
+            bg_start = end_time
         # 이 summary의 누적 start_time 갱신
         bg_video_start_times[idx] = bg_start
 
