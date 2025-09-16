@@ -713,7 +713,7 @@ def create_news_shorts_video_with_bgvideo_fast(
     target_en, summaries, bg_dir, out_dir, bgm_path, output_path,
     duration_per_caption=3, target_kr="테슬라", font_path=None
 ):
-    # 1. 배경 영상 후보
+    # 1. 배경 영상 리스트 구성
     video_candidates = [f for f in os.listdir(bg_dir) if f.endswith(".mp4")]
     target_videos = [f for f in video_candidates if target_en.lower() in f.lower()]
     business_videos = [f for f in video_candidates if f.startswith("business")]
@@ -725,9 +725,9 @@ def create_news_shorts_video_with_bgvideo_fast(
     bg_video_list = []
     for i in range(len(summaries)):
         if i < len(target_videos):
-            bg_video_list.append(os.path.join(bg_dir, target_videos[i]))
+            bg_video_list.append(target_videos[i])
         else:
-            bg_video_list.append(os.path.join(bg_dir, random.choice(business_videos)))
+            bg_video_list.append(random.choice(business_videos))
 
     # 2. intro/outro 이미지
     create_intro_image_news(target_en, target_kr)
@@ -739,90 +739,89 @@ def create_news_shorts_video_with_bgvideo_fast(
     clips = []
 
     # 3. 인트로
-    intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080,1920))
+    intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080, 1920))
     clips.append(intro_clip)
 
-
-    # start_time = 0  # 전체 sentences 기준 누적 시간
-
-    # 💡 실제 VideoFileClip 객체를 미리 로딩
+    # 4. 배경 영상 객체 미리 로딩
     bg_video_clips = [VideoFileClip(os.path.join(bg_dir, f)).resize((1080, 1920)) for f in bg_video_list]
-    bg_video_start_times = [0] * len(summaries)  # 각 배경 영상마다의 누적 시간
+    bg_video_index = 0
+    bg_video_start = 0
 
+    # 5. 전체 자막 수에 따라 자막 시간 계산
     intro_duration = 3
     outro_duration = 2
     total_max_duration = 60
     available_caption_duration = total_max_duration - intro_duration - outro_duration
 
-    # 💡 전체 자막 수 계산
     total_sentences = 0
     for idx, summary in enumerate(summaries):
         numbered_summary = f"{idx+1}. {summary}"
         total_sentences += len(split_korean_sentences(numbered_summary))
 
     per_caption = available_caption_duration / total_sentences
-    per_caption = max(2, min(4, per_caption))  # 너무 짧거나 너무 길지 않게 제한
+    per_caption = max(2, min(4, per_caption))  # 너무 짧거나 길지 않게
 
-    # 4. 본문
+    # 6. 본문 생성
     for idx, summary in enumerate(summaries):
-        # summary 앞에 순서 번호 붙이기
         numbered_summary = f"{idx+1}. {summary}"
-
         sentences = split_korean_sentences(numbered_summary)
-        bg_video = bg_video_clips[idx]  # ✅ 같은 객체 유지
-        bg_start = bg_video_start_times[idx]  # 이 summary의 시작 시간
 
         for sent in sentences:
-            caption_array = create_caption_image_array(sent, size=(1080,1920), font_path=font_path)
-            if f"{idx+1}." == sent.strip(): # 숫자 표시시간
-                caption_clip = ImageClip(caption_array, transparent=True).set_duration(1)
+            caption_array = create_caption_image_array(sent, size=(1080, 1920), font_path=font_path)
 
-                # 배경 구간 추출: 누적 시간 기준
-                # if start_time + 1 > bg_video.duration:
-                #     start_time = 0
-                # 클립 길이 넘어가면 loop
-                if bg_start + 1 > bg_video.duration:
-                    bg_start = 0
-
-                end_time = min(bg_video.duration, bg_start + 1)
-                bg_clip = bg_video.subclip(bg_start, end_time)
-
+            # ⏱️ Duration 설정
+            if f"{idx+1}." == sent.strip():
+                duration = 1
             else:
-                caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_caption)
+                duration = per_caption
 
-                # 배경 구간 추출: 누적 시간 기준
-                # if start_time + per_caption > bg_video.duration:
-                #     start_time = 0
-                # 클립 길이 넘어가면 화면 정지
-                end_time = bg_start + per_caption
-                if end_time > bg_video.duration:
-                    # 배경 영상의 마지막 프레임 freeze
-                    bg_clip = bg_video.to_ImageClip(t=bg_video.duration - 0.1).set_duration(per_caption)
-                else:            
-                    end_time = min(bg_video.duration, bg_start + per_caption)
-                    bg_clip = bg_video.subclip(bg_start, end_time)
+            caption_clip = ImageClip(caption_array, transparent=True).set_duration(duration)
 
+            remaining_time = duration
+            bg_subclips = []
+
+            # 🔁 필요한 만큼 배경 영상 이어붙이기
+            while remaining_time > 0:
+                current_clip = bg_video_clips[bg_video_index]
+                current_duration = current_clip.duration
+
+                available = current_duration - bg_video_start
+                use_duration = min(available, remaining_time)
+
+                if use_duration <= 0:
+                    bg_video_index = (bg_video_index + 1) % len(bg_video_clips)
+                    bg_video_start = 0
+                    continue
+
+                subclip = current_clip.subclip(bg_video_start, bg_video_start + use_duration)
+                bg_subclips.append(subclip)
+
+                bg_video_start += use_duration
+                remaining_time -= use_duration
+
+                if bg_video_start >= current_duration:
+                    bg_video_index = (bg_video_index + 1) % len(bg_video_clips)
+                    bg_video_start = 0
+
+            bg_clip = concatenate_videoclips(bg_subclips)
             comp_clip = CompositeVideoClip([bg_clip, caption_clip])
             clips.append(comp_clip)
 
-            bg_start = end_time
-        # 이 summary의 누적 start_time 갱신
-        bg_video_start_times[idx] = bg_start
-
-    # 5. 아웃트로
-    outro_clip = ImageClip(outro_img_path).set_duration(2).resize((1080,1920))
+    # 7. 아웃트로
+    outro_clip = ImageClip(outro_img_path).set_duration(2).resize((1080, 1920))
     clips.append(outro_clip)
 
-    # 6. 합성
+    # 8. 전체 영상 합성
     final_clip = concatenate_videoclips(clips, method="compose")
 
-    # 7. 배경음악
+    # 9. 배경음악
     if bgm_path and os.path.exists(bgm_path):
         bgm = AudioFileClip(bgm_path).volumex(0.5)
         final_clip = final_clip.set_audio(bgm.set_duration(final_clip.duration))
 
-    # 8. 저장
+    # 10. 저장
     final_clip.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
+
 
 
 # ============================ 유튭 업로드 ===========================
