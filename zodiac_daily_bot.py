@@ -723,7 +723,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
     # summary 수 만큼 배경 영상 리스트 생성
     bg_video_list = []
-    for i in range(len(summaries)):
+    for i in range(len(summaries)+2):
         if i < len(target_videos):
             bg_video_list.append(target_videos[i])
         else:
@@ -748,7 +748,7 @@ def create_news_shorts_video_with_bgvideo_fast(
     bg_video_start = 0
 
     # 5. 전체 자막 수에 따라 자막 시간 계산
-    intro_duration = 3
+    intro_duration = 2
     outro_duration = 2
     total_max_duration = 60
     available_caption_duration = total_max_duration - intro_duration - outro_duration
