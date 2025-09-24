@@ -723,7 +723,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
     # summary 수 만큼 배경 영상 리스트 생성
     bg_video_list = []
-    for i in range(len(summaries)+2):
+    for i in range(len(summaries)+3):
         if i < len(target_videos):
             bg_video_list.append(target_videos[i])
         else:
@@ -744,6 +744,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
     # 4. 배경 영상 객체 미리 로딩
     bg_video_clips = [VideoFileClip(os.path.join(bg_dir, f)).resize((1080, 1920)) for f in bg_video_list]
+    random.shuffle(bg_video_clips)
     bg_video_index = 0
     bg_video_start = 0
 
@@ -866,7 +867,7 @@ def upload_video_to_youtube_news(video_path, target_kr):
 
     if target_kr == "조비 에비에이션":
         run_daily_pipeline_news_business()
-    elif target_kr == "경제":
+    elif target_kr == "코인":
         # token.json 삭제
         try:
             os.remove("token.json")
@@ -878,6 +879,8 @@ def upload_video_to_youtube_news(video_path, target_kr):
 
     elif target_kr == "테슬라":
         run_daily_pipeline_news_jovy()
+    elif target_kr == "경제":
+        run_daily_pipeline_news_coin()
 
 def run_daily_pipeline_news():
     print("🚀 테슬라 뉴스 요약 쇼츠 생성 시작")
@@ -928,14 +931,6 @@ def run_daily_pipeline_news_jovy():
 
         date_str = datetime.now().strftime("%Y%m%d")
 
-        # create_youtube_shorts_video(
-        #     intro_path=OUTPUT_INTRO,
-        #     body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
-        #     outro_path=OUTPUT_OUTRO,
-        #     bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
-        #     output_path=os.path.join(OUT_DIR,  f"{date_str}_jovy_news_shorts.mp4")
-        # )
-
         create_news_shorts_video_with_bgvideo_fast(
             "Jovy", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_Jovy_news_shorts.mp4"), duration_per_caption=3, target_kr="조비 에비에이션", font_path=FONT_PATH
         )
@@ -962,20 +957,37 @@ def run_daily_pipeline_news_business():
 
         date_str = datetime.now().strftime("%Y%m%d")
 
-        # create_youtube_shorts_video(
-        #     intro_path=OUTPUT_INTRO,
-        #     body_dir=os.path.join(BASE_DIR,"results"),  # body 이미지가 있는 폴더
-        #     outro_path=OUTPUT_OUTRO,
-        #     bgm_path=os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"),
-        #     output_path=os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4")
-        # )
-
         create_news_shorts_video_with_bgvideo_fast(
             "business", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4"), duration_per_caption=3, target_kr="경제", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
         upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4"), "경제")
+    else:
+        run_daily_pipeline_news_coin()
+
+def run_daily_pipeline_news_coin():
+    print("🚀 코인 관련 뉴스 요약 쇼츠 생성 시작")
+    us_newsdata = fetch_newsdata_articles("bitcoin OR ethereum OR crypto", country="us", language="en", category="business")
+    save_articles("us", "newsdata", us_newsdata)
+
+    collected_articles = get_news_from_html()
+    summaries = summarize_articles(collected_articles, "business")
+
+    if len(summaries) > 0:
+        create_intro_image_news("crypto", "코인")
+        # for idx, summary in enumerate(summaries):
+        #     create_body_image(summary, idx, "business")
+        create_outro_image()
+
+        date_str = datetime.now().strftime("%Y%m%d")
+
+        create_news_shorts_video_with_bgvideo_fast(
+            "crypto", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_crypto_news_shorts.mp4"), duration_per_caption=3, target_kr="코인", font_path=FONT_PATH
+        )
+
+        # ⏭️ 다음 단계: YouTube 업로드
+        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_crypto_news_shorts.mp4"), "코인")
     else:
         # token.json 삭제
         try:

@@ -463,5 +463,30 @@
         "source_name": "Daily Political",
         "attribute": "class",
         "value": "entry"
+    },
+    {
+        "source_name": "Capjournal",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Foreign Policy",
+        "attribute": "class",
+        "value": "content-gated content-gated--main-article"
+    },
+    {
+        "source_name": "Tom's Guide",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Watch List News",
+        "attribute": "class",
+        "value": "entry"
+    },
+    {
+        "source_name": "Markets Daily",
+        "attribute": "id",
+        "value": "overview"
     }
 ]
