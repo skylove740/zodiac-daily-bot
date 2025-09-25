@@ -394,7 +394,7 @@ def create_intro_image_news(target_en, target_kr):
     # intro_bg가 없으면 fallback으로 대체
     if not os.path.exists(intro_bg):
         print(f"[경고] 파일이 존재하지 않습니다: {intro_bg}, 대체 이미지로 전환합니다.")
-        intro_bg = os.path.join(BG_DIR, "intro_bg_tesla.png")
+        intro_bg = os.path.join(BG_DIR, "intro_bg_business.png")
 
     img = Image.open(intro_bg).convert("RGBA")
     W, H = img.size
@@ -942,15 +942,15 @@ def run_daily_pipeline_news_jovy():
 
 
 def run_daily_pipeline_news_business():
-    print("🚀 경제 뉴스 요약 쇼츠 생성 시작")
-    us_newsdata = fetch_newsdata_articles(None, country="us", language="en", category="business")
+    print("🚀 비트마인 뉴스 요약 쇼츠 생성 시작")
+    us_newsdata = fetch_newsdata_articles("bitmine", country="us", language="en", category="business")
     save_articles("us", "newsdata", us_newsdata)
 
     collected_articles = get_news_from_html()
-    summaries = summarize_articles(collected_articles, "business")
+    summaries = summarize_articles(collected_articles, "bitmine")
 
     if len(summaries) > 0:
-        create_intro_image_news("business", "경제")
+        create_intro_image_news("bitmine", "비트마인")
         # for idx, summary in enumerate(summaries):
         #     create_body_image(summary, idx, "business")
         create_outro_image()
@@ -958,11 +958,11 @@ def run_daily_pipeline_news_business():
         date_str = datetime.now().strftime("%Y%m%d")
 
         create_news_shorts_video_with_bgvideo_fast(
-            "business", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4"), duration_per_caption=3, target_kr="경제", font_path=FONT_PATH
+            "bitmine", summaries, BG_DIR, OUT_DIR, os.path.join(BASE_DIR, "bgm", "bgm_news.mp3"), os.path.join(OUT_DIR,  f"{date_str}_bitmine_news_shorts.mp4"), duration_per_caption=3, target_kr="비트마인", font_path=FONT_PATH
         )
 
         # ⏭️ 다음 단계: YouTube 업로드
-        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_business_news_shorts.mp4"), "경제")
+        upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_bitmine_news_shorts.mp4"), "비트마인")
     else:
         run_daily_pipeline_news_coin()
 
@@ -972,7 +972,7 @@ def run_daily_pipeline_news_coin():
     save_articles("us", "newsdata", us_newsdata)
 
     collected_articles = get_news_from_html()
-    summaries = summarize_articles(collected_articles, "business")
+    summaries = summarize_articles(collected_articles, "crypto")
 
     if len(summaries) > 0:
         create_intro_image_news("crypto", "코인")

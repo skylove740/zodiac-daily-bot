@@ -488,5 +488,20 @@
         "source_name": "Markets Daily",
         "attribute": "id",
         "value": "overview"
+    },
+    {
+        "source_name": "Tech Xplore",
+        "attribute": "class",
+        "value": "mt-4 text-low-up text-regular article-main"
+    },
+    {
+        "source_name": "The Sun",
+        "attribute": "class",
+        "value": "article__content"
+    },
+    {
+        "source_name": "Reflector",
+        "attribute": "id",
+        "value": "article-body"
     }
 ]
