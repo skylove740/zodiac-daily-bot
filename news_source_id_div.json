@@ -121,8 +121,8 @@
     },
     {
         "source_name": "Financialcontent",
-        "attribute": "id",
-        "value": "articlecontent"
+        "attribute": "class",
+        "value": "article-body"
     },
     {
         "source_name": "Menafn",
@@ -202,7 +202,7 @@
     {
         "source_name": "Headtopics",
         "attribute": "class",
-        "value": "Article-contentBlocks"
+        "value": " ArticleContentBlock ArticleContentBlock--text ArticleContentBlock--right Copy Copy--l"
     },
     {
         "source_name": "Futurism",
@@ -501,6 +501,26 @@
     },
     {
         "source_name": "Reflector",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "New Atlas",
+        "attribute": "class",
+        "value": "RichTextArticleBody"
+    },
+    {
+        "source_name": "Pr Newswire",
+        "attribute": "class",
+        "value": "row"
+    },
+    {
+        "source_name": "Rdrnews",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Recorderonline",
         "attribute": "id",
         "value": "article-body"
     }
