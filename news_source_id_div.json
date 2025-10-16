@@ -523,5 +523,25 @@
         "source_name": "Recorderonline",
         "attribute": "id",
         "value": "article-body"
+    },
+    {
+        "source_name": "International Business Times",
+        "attribute": "class",
+        "value": "article-paywall-contents"
+    },
+    {
+        "source_name": "Techspot",
+        "attribute": "class",
+        "value": "articleBody"
+    },
+    {
+        "source_name": "Brietbart",
+        "attribute": "class",
+        "value": "entry-content"
+    },
+    {
+        "source_name": "Zephyrnet",
+        "attribute": "class",
+        "value": "tdb-block-inner td-fix-index"
     }
 ]
