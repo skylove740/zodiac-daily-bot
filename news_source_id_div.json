@@ -227,7 +227,7 @@
     {
         "source_name": "Thestreet",
         "attribute": "class",
-        "value": "m-detail--body"
+        "value": "content article-content styles_relativeContent__b8mW_"
     },
     {
         "source_name": "Daily Press",
@@ -543,5 +543,25 @@
         "source_name": "Zephyrnet",
         "attribute": "class",
         "value": "tdb-block-inner td-fix-index"
+    },
+    {
+        "source_name": "Abc News",
+        "attribute": "class",
+        "value": "xvlfx ZRifP TKoO eaKKC EcdEg bOdfO qXhdi NFNeu UyHES "
+    },
+    {
+        "source_name": "Mankato Free Press",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Hastingstribune",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Coinpedia",
+        "attribute": "class",
+        "value": "entry-content entry clearfix"
     }
 ]
