@@ -1768,6 +1768,7 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
         # 가능한 조합: kr(ko), us(en), global/en 등 — 기존 환경에 맞게 호출
         try:
             us = fetch_newsdata_articles(q=None, country="us", language="en", category="business") or []
+            print("NewsData US articles fetched:", len(us))
             for a in us:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
                 pub_dt = parse_date_flexible(pub)
@@ -1784,6 +1785,7 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
 
         try:
             kr = fetch_newsdata_articles(q=None, country="kr", language="ko", category="business") or []
+            print("NewsData KR articles fetched:", len(kr))
             for a in kr:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
                 pub_dt = parse_date_flexible(pub)
@@ -1818,6 +1820,7 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
                         })
             except Exception as e:
                 print("RSS fetch error for region", region, e)
+        print("RSS articles fetched:", len(collected))
     except Exception as e:
         print("RSS fetch general error", e)
 
@@ -2040,6 +2043,7 @@ def build_and_save_shorts_video_from_pages(pages: List[str],
 # 최종 통합 함수: 요구사항(1)-(4)을 수행
 # -----------------------
 def run_market_impact_pipeline():
+    print("🚀 시장 영향 뉴스 쇼츠 생성 시작")
     """
     1) now 기준으로 48시간 전부터 now까지 기사 수집
     2) GPT에게 각 자산시장별 영향 분석 요청 (JSON)
@@ -2055,12 +2059,14 @@ def run_market_impact_pipeline():
 
     if not articles:
         print("[market pipeline] 수집된 기사 없음 — 종료")
+        run_daily_pipeline_news_coin()
         return
 
     # 2) ask GPT
     assets_analysis = ask_gpt_market_impact(articles, from_dt, now)
     if not assets_analysis:
         print("[market pipeline] GPT에서 유효한 분석을 받지 못함 — 종료")
+        run_daily_pipeline_news_coin()
         return
     print("[market pipeline] GPT 분석 결과:", assets_analysis)
 
@@ -2068,6 +2074,7 @@ def run_market_impact_pipeline():
     pages = build_pages_for_assets(assets_analysis, max_chars_per_frame=120)
     if not pages:
         print("[market pipeline] 생성된 페이지 없음 — 종료")
+        run_daily_pipeline_news_coin()
         return
     print("[market pipeline] 생성된 페이지:", pages)
 
@@ -2085,7 +2092,7 @@ def run_market_impact_pipeline():
 
     print("[market pipeline] 완료: ", video_path)
 
-    # run_daily_pipeline_news_coin()
+    run_daily_pipeline_news_coin()
 
 
 
