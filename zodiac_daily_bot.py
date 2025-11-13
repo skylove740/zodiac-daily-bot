@@ -5,7 +5,7 @@ import base64
 import openai
 from openai import OpenAI
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from PIL import Image, ImageDraw, ImageFont
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
@@ -26,6 +26,7 @@ import textwrap
 import glob
 import random
 import numpy as np
+from typing import List, Dict, Any
 
 
 load_dotenv()
@@ -76,6 +77,8 @@ OUTPUT_OUTRO = os.path.join(OUT_DIR, "outro_output.jpg")
 
 os.makedirs(BG_DIR, exist_ok=True)
 os.makedirs(OUT_DIR, exist_ok=True)
+
+
 
 # ========== 경제 뉴스 관련 함수들 ==========
 
@@ -866,7 +869,7 @@ def upload_video_to_youtube_news(video_path, target_kr):
     print(f"✅ 업로드 완료! YouTube Video ID: {response.get('id')}")
 
     if target_kr == "조비 에비에이션":
-        run_daily_pipeline_news_business()
+        run_market_impact_pipeline()
     elif target_kr == "코인":
         # token.json 삭제
         try:
@@ -938,7 +941,7 @@ def run_daily_pipeline_news_jovy():
         # ⏭️ 다음 단계: YouTube 업로드
         upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_Jovy_news_shorts.mp4"), "조비 에비에이션")
     else:
-        run_daily_pipeline_news_business()
+        run_market_impact_pipeline()
 
 
 def run_daily_pipeline_news_business():
@@ -965,6 +968,7 @@ def run_daily_pipeline_news_business():
         upload_video_to_youtube_news(os.path.join(OUT_DIR,  f"{date_str}_bitmine_news_shorts.mp4"), "비트마인")
     else:
         run_daily_pipeline_news_coin()
+        
 
 def run_daily_pipeline_news_coin():
     print("🚀 코인 관련 뉴스 요약 쇼츠 생성 시작")
@@ -1698,6 +1702,390 @@ def run_daily_pipeline_star():
 
     # ⏭️ 다음 단계: YouTube 업로드
     upload_video_to_youtube_star(video_path)
+
+
+
+# ========== new 자산 관련 신규 뉴스 함수 ======
+
+# -----------------------
+# 보조 유틸: 날짜 파싱 안전 함수
+# -----------------------
+def parse_date_flexible(s: str):
+    """여러 포맷을 시도해서 datetime 반환 (UTC+9 기준으로 반환). 실패 시 None."""
+    if s is None:
+        return None
+    # 이미 ISO 형태일 가능성
+    try:
+        # 일부 API는 '2025-08-01T12:34:56Z' 또는 '2025-08-01 12:34:56' 등으로 제공.
+        # datetime.fromisoformat은 Z를 못 받으므로 replace 처리
+        txt = s.strip()
+        txt = txt.replace("Z", "+00:00")
+        dt = None
+        try:
+            dt = datetime.fromisoformat(txt)
+        except Exception:
+            pass
+        if dt is None:
+            # fallback common formats
+            for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d %H:%M:%S", "%a, %d %b %Y %H:%M:%S %Z"):
+                try:
+                    dt = datetime.strptime(txt, fmt)
+                    break
+                except Exception:
+                    continue
+        if dt is None:
+            # try numeric-only fallback
+            nums = re.findall(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", txt)
+            if nums:
+                dt = datetime.fromisoformat(nums[0])
+        if dt is None:
+            return None
+        # If no tzinfo, assume UTC then convert to Asia/Seoul
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # convert to Asia/Seoul (KST)
+        try:
+            return dt.astimezone(ZoneInfo("Asia/Seoul"))
+        except Exception:
+            # fallback +9
+            return (dt + timedelta(hours=9)).replace(tzinfo=ZoneInfo("Asia/Seoul"))
+    except Exception:
+        return None
+    
+# -----------------------
+# 보조: 기사 리스트를 수집하고 시간 범위로 필터
+# -----------------------
+def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str, Any]]:
+    """
+    기존의 fetch_newsdata_articles / fetch_rss_articles 등 사용자 정의 함수들을 재사용해서
+    from_dt <= published <= to_dt 범위의 기사들을 수집하여 반환.
+    결과 항목 dict: {title, content, url, source, published}
+    """
+    collected = []
+
+    # 1) NewsData (예: country combinations)
+    try:
+        # 가능한 조합: kr(ko), us(en), global/en 등 — 기존 환경에 맞게 호출
+        try:
+            us = fetch_newsdata_articles(q=None, country="us", language="en", category="business") or []
+            for a in us:
+                pub = a.get("pubDate") or a.get("published_at") or a.get("date")
+                pub_dt = parse_date_flexible(pub)
+                if pub_dt and from_dt <= pub_dt <= to_dt:
+                    collected.append({
+                        "title": a.get("title"),
+                        "content": a.get("content") or a.get("description") or a.get("summary") or "",
+                        "url": a.get("link") or a.get("url") or a.get("source_url"),
+                        "source": a.get("source_id") or a.get("source", {}).get("name") if isinstance(a.get("source"), dict) else a.get("source"),
+                        "published": pub_dt.isoformat()
+                    })
+        except Exception as e:
+            print("NewsData US fetch error:", e)
+
+        try:
+            kr = fetch_newsdata_articles(q=None, country="kr", language="ko", category="business") or []
+            for a in kr:
+                pub = a.get("pubDate") or a.get("published_at") or a.get("date")
+                pub_dt = parse_date_flexible(pub)
+                if pub_dt and from_dt <= pub_dt <= to_dt:
+                    collected.append({
+                        "title": a.get("title"),
+                        "content": a.get("content") or a.get("description") or a.get("summary") or "",
+                        "url": a.get("link") or a.get("url"),
+                        "source": a.get("source_id") or a.get("source"),
+                        "published": pub_dt.isoformat()
+                    })
+        except Exception as e:
+            print("NewsData KR fetch error:", e)
+    except Exception as e:
+        print("NewsData fetch general error:", e)
+
+    # 2) RSS 피드 (기존 fetch_rss_articles를 region별로)
+    try:
+        for region in ("kr", "global"):
+            try:
+                rss_list = fetch_rss_articles(region) or []
+                for a in rss_list:
+                    pub = a.get("published")
+                    pub_dt = parse_date_flexible(pub)
+                    if pub_dt and from_dt <= pub_dt <= to_dt:
+                        collected.append({
+                            "title": a.get("title"),
+                            "content": a.get("summary") or "",
+                            "url": a.get("link"),
+                            "source": region,
+                            "published": pub_dt.isoformat()
+                        })
+            except Exception as e:
+                print("RSS fetch error for region", region, e)
+    except Exception as e:
+        print("RSS fetch general error", e)
+
+    # dedupe by URL or title
+    seen = set()
+    deduped = []
+    for art in collected:
+        key = (art.get("url") or "")[:200] + "|" + (art.get("title") or "")[:200]
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(art)
+    print(f"[collect_recent_articles] collected {len(deduped)} articles in time range.")
+    return deduped
+
+
+# -----------------------
+# GPT에게 분석 요청하는 함수
+# -----------------------
+def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_dt: datetime) -> Dict[str, List[Dict[str,Any]]]:
+    """
+    articles: list of {title, content, url, source, published}
+    반환: dict mapping asset category -> list of items:
+      { "stocks": [ {title, summary, impact_score, rationale, url, published}, ... ], "crypto": [...], ... }
+    """
+
+    # asset categories 순서 (원하면 추가)
+    asset_categories = ["Stocks", "Gold", "Crypto", "RealEstate", "Forex", "Bonds", "Commodities", "Other"]
+
+    # Build prompt
+    # 약식: 전달받은 기사 목록(제목+요약+url+source+published)을 넣고 -> 각 asset에 대해서
+    # 영향을 줄만한 기사들을 뽑고 영향정도(0-100), 짧은 요약, 간단 근거를 JSON 포맷으로 달라
+    article_texts = []
+    for i, a in enumerate(articles, start=1):
+        article_texts.append(f"{i}. TITLE: {a.get('title')}\nURL: {a.get('url')}\nPUBLISHED: {a.get('published')}\nSOURCE: {a.get('source')}\nCONTENT: {a.get('content')[:2000]}\n---")
+    big_block = "\n".join(article_texts)
+
+    prompt = (
+        "Please answer everything in Korean.\n"
+        "You are an expert market analyst. Based on the following collection of news articles (titles, short content, urls and published times),\n"
+        "identify which articles within the given 48-hour window are likely to have meaningful impact on specific asset markets (Stocks, Gold, Crypto, RealEstate, Forex, Bonds, Commodities, Other).\n"
+        "For each asset category, please produce a JSON object mapping the category name to an array of objects. Each object must include:\n"
+        "  - title: a short title (from the article)\n"
+        "  - summary: a concise summary focusing on how it affects that asset (max ~250 chars)\n"
+        "  - impact_score: integer 0-100 estimating the magnitude of impact on that asset\n"
+        "  - rationale: 1-2 sentence justification why it affects that asset\n"
+        "  - url: original url\n"
+        "  - published: published datetime in ISO format\n\n"
+        "Return only valid JSON and nothing else. Use the following category order: " + ", ".join(asset_categories) + ".\n\n"
+        "Articles (only those within last 48 hours):\n" + big_block + "\n\n"
+        "Important: Keep the JSON compact but valid. If a category has no relevant articles, return an empty array for it.\n"
+    )
+
+    # Call GPT (using user's existing style)
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4.1",
+            messages=[
+                {"role":"system", "content":"You are a market research analyst."},
+                {"role":"user", "content": prompt}
+            ],
+            temperature=0
+        )
+        raw = response.choices[0].message.content.strip()
+        print(">>>>>>>> GPT raw response:\n", raw[:1000])
+    except Exception as e:
+        print("GPT call error:", e)
+        return {}
+
+    # try to extract JSON substring
+    json_text = raw
+    # if raw contains code fences or text around json, extract {...}
+    m = re.search(r'(\{.*\})', raw, flags=re.S)
+    if m:
+        json_text = m.group(1)
+
+    try:
+        parsed = json.loads(json_text)
+        # normalize keys -> ensure each asset_category present
+        normalized = {}
+        for cat in asset_categories:
+            if cat in parsed:
+                items = parsed[cat]
+            elif cat.lower() in parsed:
+                items = parsed[cat.lower()]
+            else:
+                items = []
+            normalized[cat] = items
+        print(">>>>>>>> GPT parsed and normalized JSON:\n",normalized)
+        return normalized
+    except Exception as e:
+        print("JSON parse failed:", e)
+        print("raw GPT output:\n", raw[:2000])
+        return {}
+    
+# -----------------------
+# 페이지(프레임) 생성 함수: 자산별 title + numbered items
+# -----------------------
+def build_pages_for_assets(assets_dict: Dict[str, List[Dict[str,Any]]], max_chars_per_frame=120) -> List[str]:
+    """
+    Return list of 'page texts' in the order:
+      [ asset_title_1, asset1_item1_short, asset1_item2_short, ..., asset_title_2, asset2_item1_short, ... ]
+    Each entry is a single string that will be converted to an image/frame.
+    Splits long summaries into multiple frames by max_chars_per_frame.
+    """
+    pages = []
+    for asset, items in assets_dict.items():
+        # asset title page
+        pages.append(asset)  # will be rendered as a title page
+        # numbered items
+        for i, it in enumerate(items, start=1):
+            # build "1) summary (score:xx)"
+            title = it.get("title") or ""
+            summary = it.get("summary") or ""
+            score = it.get("impact_score") or ""
+            combined = f"{i}) {summary} (Impact: {score})"
+            # split combined if too long
+            if len(combined) <= max_chars_per_frame:
+                pages.append(combined)
+            else:
+                # split into chunks at word boundaries
+                words = combined.split()
+                chunk = ""
+                for w in words:
+                    if len(chunk) + 1 + len(w) <= max_chars_per_frame:
+                        chunk = (chunk + " " + w).strip()
+                    else:
+                        pages.append(chunk)
+                        chunk = w
+                if chunk:
+                    pages.append(chunk)
+    return pages
+
+# -----------------------
+# 비디오 빌드 + 업로드 : pages -> short video (재사용 가능한 로직)
+# -----------------------
+def build_and_save_shorts_video_from_pages(pages: List[str],
+                                           bg_dir: str,
+                                           out_dir: str,
+                                           bgm_path: str,
+                                           output_path: str,
+                                           font_path: str = None):
+    """
+    이 함수는 pages 리스트(각 페이지는 문자)를 받아서
+    이전 create_news_shorts_video_with_bgvideo_fast의 '배경 이어붙이기' 로직을 사용해
+    영상으로 만드는 함수입니다. (인트로/아웃트로 이미지는 기존 것 사용)
+    """
+    # prepare intro/outro
+    intro_img_path = OUTPUT_INTRO if os.path.exists(OUTPUT_INTRO) else os.path.join(bg_dir, "intro_bg_business.png")
+    outro_img_path = OUTRO_BG if os.path.exists(OUTRO_BG) else os.path.join(bg_dir, "outro_bg.png")
+
+    clips = []
+    intro_clip = ImageClip(intro_img_path).set_duration(3).resize((1080,1920))
+    clips.append(intro_clip)
+
+    # prepare bg clips list — reuse earlier logic: create a list longer than needed
+    video_candidates = [f for f in os.listdir(bg_dir) if f.endswith(".mp4")]
+    if not video_candidates:
+        raise FileNotFoundError("Background mp4 files not found in bg_dir")
+
+    # create a list of background filenames (randomized)
+    # make length > pages count to reduce immediate repeat
+    bg_file_list = []
+    for i in range(max(len(pages), len(video_candidates)) + 3):
+        bg_file_list.append(random.choice(video_candidates))
+    random.shuffle(bg_file_list)
+
+    # load VideoFileClip objects
+    bg_video_clips = [VideoFileClip(os.path.join(bg_dir, f)).resize((1080,1920)) for f in bg_file_list]
+    bg_index = 0
+    bg_pos = 0.0
+
+    # total duration allocation similar to earlier: compute per-page duration so final <= 60s
+    intro_duration = 3
+    outro_duration = 2
+    total_max = 60
+    available = total_max - intro_duration - outro_duration
+    per_page = available / max(1, len(pages))
+    per_page = max(1.0, min(4.0, per_page))  # keep between 1 and 4 sec (pages can be many)
+
+    for p in pages:
+        caption_array = create_caption_image_array(p, size=(1080,1920), font_path=font_path)
+        caption_clip = ImageClip(caption_array, transparent=True).set_duration(per_page)
+        remaining = per_page
+        subclips = []
+        while remaining > 0:
+            cur_clip = bg_video_clips[bg_index]
+            avail = cur_clip.duration - bg_pos
+            use = min(avail, remaining)
+            if use <= 0:
+                bg_index = (bg_index + 1) % len(bg_video_clips)
+                bg_pos = 0.0
+                continue
+            sub = cur_clip.subclip(bg_pos, bg_pos + use)
+            subclips.append(sub)
+            bg_pos += use
+            remaining -= use
+            if bg_pos >= cur_clip.duration - 1e-6:
+                bg_index = (bg_index + 1) % len(bg_video_clips)
+                bg_pos = 0.0
+        bg_clip = concatenate_videoclips(subclips)
+        comp = CompositeVideoClip([bg_clip, caption_clip])
+        clips.append(comp)
+
+    # outro
+    outro_clip = ImageClip(outro_img_path).set_duration(2).resize((1080,1920))
+    clips.append(outro_clip)
+
+    final = concatenate_videoclips(clips, method="compose")
+    if bgm_path and os.path.exists(bgm_path):
+        bgm = AudioFileClip(bgm_path).volumex(0.5)
+        final = final.set_audio(bgm.set_duration(final.duration))
+
+    # ensure out_dir exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    final.write_videofile(output_path, fps=30, codec='libx264', audio_codec='aac')
+    return output_path
+
+# -----------------------
+# 최종 통합 함수: 요구사항(1)-(4)을 수행
+# -----------------------
+def run_market_impact_pipeline():
+    """
+    1) now 기준으로 48시간 전부터 now까지 기사 수집
+    2) GPT에게 각 자산시장별 영향 분석 요청 (JSON)
+    3) 결과를 페이지로 변환(자산별 타이틀 한 장 + 번호 매긴 요약 장들)
+    4) 기존 스타일의 쇼츠 생성 & 유튜브 업로드
+    """
+    now = datetime.now(tz=ZoneInfo("Asia/Seoul"))
+    from_dt = now - timedelta(hours=48)
+    print(f"[market pipeline] Time window: {from_dt.isoformat()} ~ {now.isoformat()}")
+
+    # 1) collect
+    articles = collect_recent_articles(from_dt, now)
+
+    if not articles:
+        print("[market pipeline] 수집된 기사 없음 — 종료")
+        return
+
+    # 2) ask GPT
+    assets_analysis = ask_gpt_market_impact(articles, from_dt, now)
+    if not assets_analysis:
+        print("[market pipeline] GPT에서 유효한 분석을 받지 못함 — 종료")
+        return
+    print("[market pipeline] GPT 분석 결과:", assets_analysis)
+
+    # 3) build pages
+    pages = build_pages_for_assets(assets_analysis, max_chars_per_frame=120)
+    if not pages:
+        print("[market pipeline] 생성된 페이지 없음 — 종료")
+        return
+    print("[market pipeline] 생성된 페이지:", pages)
+
+    # create output filename
+    date_str = now.strftime("%Y%m%d_%H%M")
+    out_filename = os.path.join(OUT_DIR, f"{date_str}_market_impact_shorts.mp4")
+    bgm_file = os.path.join(BASE_DIR, "bgm", "bgm_news.mp3") if 'BASE_DIR' in globals() else None
+
+    # 4) build video
+    print("[market pipeline] 페이지 수:", len(pages))
+    video_path = build_and_save_shorts_video_from_pages(pages, BG_DIR, OUT_DIR, bgm_file, out_filename, font_path=FONT_PATH)
+
+    # 5) upload (reuse existing uploader, pass target string "시장요약")
+    upload_video_to_youtube_news(video_path, "투자관련뉴스")
+
+    print("[market pipeline] 완료: ", video_path)
+
+    # run_daily_pipeline_news_coin()
 
 
 
