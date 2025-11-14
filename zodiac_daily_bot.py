@@ -1769,8 +1769,11 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
         try:
             us = fetch_newsdata_articles(q=None, country="us", language="en", category="business") or []
             print("NewsData US articles fetched:", len(us))
+            print("us가 있음에도 아래에서 collected append가 안되고 있음, us- :")
+            print(us)
             for a in us:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
+                print("pub == ", pub)
                 pub_dt = parse_date_flexible(pub)
                 if pub_dt and from_dt <= pub_dt <= to_dt:
                     collected.append({
@@ -1786,8 +1789,11 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
         try:
             kr = fetch_newsdata_articles(q=None, country="kr", language="ko", category="business") or []
             print("NewsData KR articles fetched:", len(kr))
+            print("kr가 있음에도 아래에서 collected append가 안되고 있음, kr- :")
+            print(kr)
             for a in kr:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
+                print("pub == ", pub)
                 pub_dt = parse_date_flexible(pub)
                 if pub_dt and from_dt <= pub_dt <= to_dt:
                     collected.append({
@@ -1807,8 +1813,11 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
         for region in ("kr", "global"):
             try:
                 rss_list = fetch_rss_articles(region) or []
+                print("RSS도 계속 없다고 함, rss list ====== ")
+                print(rss_list)
                 for a in rss_list:
                     pub = a.get("published")
+                    print("pub == ", pub)
                     pub_dt = parse_date_flexible(pub)
                     if pub_dt and from_dt <= pub_dt <= to_dt:
                         collected.append({
