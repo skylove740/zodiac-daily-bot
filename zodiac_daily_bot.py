@@ -2090,7 +2090,7 @@ def run_market_impact_pipeline():
     # create output filename
     date_str = now.strftime("%Y%m%d_%H%M")
     out_filename = os.path.join(OUT_DIR, f"{date_str}_market_impact_shorts.mp4")
-    bgm_file = os.path.join(BASE_DIR, "bgm", "bgm_news.mp3") if 'BASE_DIR' in globals() else None
+    bgm_file = os.path.join(BASE_DIR, "bgm", "bgm_news2.mp3") if 'BASE_DIR' in globals() else None
 
     # 4) build video
     print("[market pipeline] 페이지 수:", len(pages))
