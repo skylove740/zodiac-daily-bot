@@ -27,6 +27,7 @@ import glob
 import random
 import numpy as np
 from typing import List, Dict, Any
+import html
 
 
 load_dotenv()
@@ -436,11 +437,43 @@ def create_body_image(text, idx, target):
     text = f"{(idx+1)}) {text}"
     # 2. 문장 분리
     sentences = split_korean_sentences(text)
+    # 🔥 HTML escape 제거
+    sentences = [html.unescape(s).strip() for s in sentences]
+
     # 한 문장씩 묶기
     pages = []
-    for i in range(len(sentences)):
-        page_text = sentences[i]
-        pages.append(page_text)
+    buffer = ""
+    # for i in range(len(sentences)):
+    #     page_text = sentences[i]
+    #     pages.append(page_text)
+    for sent in sentences:
+        # 🔥 숫자 + '.' 형식인지 체크 (예: "1.", "2.", "10.")
+        if re.fullmatch(r"\d+\.", sent):
+            # 기존 buffer가 비어있지 않으면 먼저 저장
+            if buffer.strip():
+                pages.append(buffer.strip())
+                buffer = ""
+            # 넘버링은 단독 페이지
+            pages.append(sent)
+            continue
+
+        # ------- 일반 문장 처리 -------
+        # 현재 버퍼 + 문장을 합쳤을 때 50자 이하이면 같은 페이지로 묶기
+        if len(buffer) + len(sent) <= 50:
+            if buffer == "":
+                buffer = sent
+            else:
+                buffer += " " + sent
+        else:
+            # 50자를 넘으면 현재 페이지 저장하고 새 페이지 시작
+            if buffer.strip():
+                pages.append(buffer.strip())
+            buffer = sent
+
+    # 버퍼 안 남아있으면 마지막으로 저장
+    if buffer.strip():
+        pages.append(buffer.strip())
+
 
     saved_files = []
     for page_num, page_text in enumerate(pages, start=1):
@@ -658,7 +691,7 @@ def wrap_text_by_pixel(text, font, max_width, draw):
 # ===== 메모리 기반 캡션 이미지 생성 =====
 def create_caption_image_array(text, size=(1080, 1920), font_path=None):
     img = Image.new("RGBA", size, (0,0,0,0))
-    draw = ImageDraw.Draw(img)
+    draw = ImageDraw.Draw(img, encoding="unic")
 
     image_width, image_height = img.size
     max_text_height = image_height * 0.4
@@ -670,9 +703,11 @@ def create_caption_image_array(text, size=(1080, 1920), font_path=None):
         while True:
             font = ImageFont.truetype(font_path, font_size)
             lines = wrap_text_by_pixel(text, font, max_text_width, draw)
-            line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
+            # line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
+            line_heights = [(font.getbbox(line)[3] - font.getbbox(line)[1]) for line in lines]
             total_height = sum(line_heights) + 10*(len(lines)-1)
-            max_width = max([draw.textlength(line, font=font) for line in lines])
+            # max_width = max([draw.textlength(line, font=font) for line in lines])
+            max_width = max([font.getlength(line) for line in lines])
             if total_height >= max_text_height or max_width >= max_text_width or font_size > 200:
                 break
             font_size += 2
@@ -699,7 +734,9 @@ def create_caption_image_array(text, size=(1080, 1920), font_path=None):
     # 텍스트 중앙 정렬
     y_text = box_y + 20
     for line, h in zip(lines, line_heights):
-        w = draw.textbbox((0,0), line, font=font)[2]
+        # w = draw.textbbox((0,0), line, font=font)[2]
+        bbox = font.getbbox(line)
+        w = bbox[2] - bbox[0]
         x = (size[0]-w)//2
         # 테두리
         for dx in [-1,1]:
