@@ -690,8 +690,10 @@ def wrap_text_by_pixel(text, font, max_width, draw):
 
 # ===== 메모리 기반 캡션 이미지 생성 =====
 def create_caption_image_array(text, size=(1080, 1920), font_path=None):
+    text = html.unescape(text or "")
+    
     img = Image.new("RGBA", size, (0,0,0,0))
-    draw = ImageDraw.Draw(img, encoding="unic")
+    draw = ImageDraw.Draw(img)
 
     image_width, image_height = img.size
     max_text_height = image_height * 0.4
