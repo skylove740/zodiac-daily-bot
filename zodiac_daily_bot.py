@@ -705,8 +705,8 @@ def create_caption_image_array(text, size=(1080, 1920), font_path=None):
         while True:
             font = ImageFont.truetype(font_path, font_size)
             lines = wrap_text_by_pixel(text, font, max_text_width, draw)
-            # line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
-            line_heights = [(font.getbbox(line)[3] - font.getbbox(line)[1]) for line in lines]
+            line_heights = [draw.textbbox((0,0), line, font=font)[3] for line in lines]
+            # line_heights = [(font.getbbox(line)[3] - font.getbbox(line)[1]) for line in lines]
             total_height = sum(line_heights) + 10*(len(lines)-1)
             # max_width = max([draw.textlength(line, font=font) for line in lines])
             max_width = max([font.getlength(line) for line in lines])
@@ -1814,14 +1814,15 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
                 print("pub == ", pub)
                 pub_dt = parse_date_flexible(pub)
-                if pub_dt and from_dt <= pub_dt <= to_dt:
-                    collected.append({
-                        "title": a.get("title"),
-                        "content": a.get("content") or a.get("description") or a.get("summary") or "",
-                        "url": a.get("link") or a.get("url") or a.get("source_url"),
-                        "source": a.get("source_id") or a.get("source", {}).get("name") if isinstance(a.get("source"), dict) else a.get("source"),
-                        "published": pub_dt.isoformat()
-                    })
+                print("pub_dt == ", pub_dt)
+                # if pub_dt and from_dt <= pub_dt <= to_dt:
+                collected.append({
+                    "title": a.get("title"),
+                    "content": a.get("content") or a.get("description") or a.get("summary") or "",
+                    "url": a.get("link") or a.get("url") or a.get("source_url"),
+                    "source": a.get("source_id") or a.get("source", {}).get("name") if isinstance(a.get("source"), dict) else a.get("source"),
+                    "published": pub_dt.isoformat()
+                })
         except Exception as e:
             print("NewsData US fetch error:", e)
 
@@ -1834,14 +1835,15 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
                 print("pub == ", pub)
                 pub_dt = parse_date_flexible(pub)
-                if pub_dt and from_dt <= pub_dt <= to_dt:
-                    collected.append({
-                        "title": a.get("title"),
-                        "content": a.get("content") or a.get("description") or a.get("summary") or "",
-                        "url": a.get("link") or a.get("url"),
-                        "source": a.get("source_id") or a.get("source"),
-                        "published": pub_dt.isoformat()
-                    })
+                print("pub_dt == ", pub_dt)
+                # if pub_dt and from_dt <= pub_dt <= to_dt:
+                collected.append({
+                    "title": a.get("title"),
+                    "content": a.get("content") or a.get("description") or a.get("summary") or "",
+                    "url": a.get("link") or a.get("url"),
+                    "source": a.get("source_id") or a.get("source"),
+                    "published": pub_dt.isoformat()
+                })
         except Exception as e:
             print("NewsData KR fetch error:", e)
     except Exception as e:
@@ -1858,17 +1860,18 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
                     pub = a.get("published")
                     print("pub == ", pub)
                     pub_dt = parse_date_flexible(pub)
-                    if pub_dt and from_dt <= pub_dt <= to_dt:
-                        collected.append({
-                            "title": a.get("title"),
-                            "content": a.get("summary") or "",
-                            "url": a.get("link"),
-                            "source": region,
-                            "published": pub_dt.isoformat()
-                        })
+                    print("pub_dt == ", pub_dt)
+                    # if pub_dt and from_dt <= pub_dt <= to_dt:
+                    collected.append({
+                        "title": a.get("title"),
+                        "content": a.get("summary") or "",
+                        "url": a.get("link"),
+                        "source": region,
+                        "published": pub_dt.isoformat()
+                    })
             except Exception as e:
                 print("RSS fetch error for region", region, e)
-        print("RSS articles fetched:", len(collected))
+        print("all articles fetched:", len(collected))
     except Exception as e:
         print("RSS fetch general error", e)
 
