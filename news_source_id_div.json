@@ -563,5 +563,30 @@
         "source_name": "Coinpedia",
         "attribute": "class",
         "value": "entry-content entry clearfix"
+    },
+    {
+        "source_name": "Goskagit",
+        "attribute": "id",
+        "value": "article-body"
+    },
+    {
+        "source_name": "Zolmax",
+        "attribute": "class",
+        "value": "entry"
+    },
+    {
+        "source_name": "Gizmodo",
+        "attribute": "article",
+        "value": "-"
+    },
+    {
+        "source_name": "Techannouncer",
+        "attribute": "class",
+        "value": "entry-content"
+    },
+    {
+        "source_name": "Techannouncer",
+        "attribute": "class",
+        "value": "entry-content"
     }
 ]

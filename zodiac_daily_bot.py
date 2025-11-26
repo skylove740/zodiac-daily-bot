@@ -1786,8 +1786,9 @@ def parse_date_flexible(s: str):
         try:
             return dt.astimezone(ZoneInfo("Asia/Seoul"))
         except Exception:
-            # fallback +9
-            return (dt + timedelta(hours=9)).replace(tzinfo=ZoneInfo("Asia/Seoul"))
+            # zoneinfo 없음 → 안전 fallback
+            kst = dt + timedelta(hours=9)
+            return kst.replace(tzinfo=None)   # tzinfo 강제 설정하지 않음
     except Exception:
         return None
     
