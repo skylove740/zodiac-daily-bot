@@ -1750,47 +1750,52 @@ def run_daily_pipeline_star():
 # 보조 유틸: 날짜 파싱 안전 함수
 # -----------------------
 def parse_date_flexible(s: str):
-    """여러 포맷을 시도해서 datetime 반환 (UTC+9 기준으로 반환). 실패 시 None."""
-    if s is None:
+    if not s:
         return None
-    # 이미 ISO 형태일 가능성
+
+    raw = s.strip()
+
+    # 1) 숨은 문자 제거
+    raw = raw.replace("\xa0", " ").replace("\u200b", "").replace("\ufeff", "")
+
+    # 2) Z를 +0000 형식으로 통일
+    raw = raw.replace("Z", "+0000")
+
+    # 3) 정규식으로 날짜/시간 뽑기
+    #   yyyy-mm-dd hh:mm:ss
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?", raw)
+    if not m:
+        return None
+
+    year, month, day, hh, mm, ss = m.groups()
+    hh = hh or "00"
+    mm = mm or "00"
+    ss = ss or "00"
+
+    # 4) 기본 datetime 만들기 (timezone 없음)
+    dt = datetime(
+        int(year), int(month), int(day),
+        int(hh), int(mm), int(ss),
+        tzinfo=timezone.utc
+    )
+
+    # 5) timezone offset 추출(+0900 등)
+    tz = re.search(r"([+\-]\d{4})", raw)
+    if tz:
+        offset = tz.group(1)
+        hours = int(offset[1:3])
+        mins = int(offset[3:])
+        delta = timedelta(hours=hours, minutes=mins)
+        if offset.startswith("-"):
+            delta = -delta
+        dt = dt.replace(tzinfo=timezone(delta))
+
+    # 6) KST 변환
     try:
-        # 일부 API는 '2025-08-01T12:34:56Z' 또는 '2025-08-01 12:34:56' 등으로 제공.
-        # datetime.fromisoformat은 Z를 못 받으므로 replace 처리
-        txt = s.strip()
-        txt = txt.replace("Z", "+00:00")
-        dt = None
-        try:
-            dt = datetime.fromisoformat(txt)
-        except Exception:
-            pass
-        if dt is None:
-            # fallback common formats
-            for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d %H:%M:%S", "%a, %d %b %Y %H:%M:%S %Z"):
-                try:
-                    dt = datetime.strptime(txt, fmt)
-                    break
-                except Exception:
-                    continue
-        if dt is None:
-            # try numeric-only fallback
-            nums = re.findall(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", txt)
-            if nums:
-                dt = datetime.fromisoformat(nums[0])
-        if dt is None:
-            return None
-        # If no tzinfo, assume UTC then convert to Asia/Seoul
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        # convert to Asia/Seoul (KST)
-        try:
-            return dt.astimezone(ZoneInfo("Asia/Seoul"))
-        except Exception:
-            # zoneinfo 없음 → 안전 fallback
-            kst = dt + timedelta(hours=9)
-            return kst.replace(tzinfo=None)   # tzinfo 강제 설정하지 않음
-    except Exception:
-        return None
+        return dt.astimezone(ZoneInfo("Asia/Seoul"))
+    except:
+        # ZoneInfo 없는 환경 → 안전 fallback
+        return dt + timedelta(hours=9)
     
 # -----------------------
 # 보조: 기사 리스트를 수집하고 시간 범위로 필터
@@ -1814,6 +1819,7 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
             for a in us:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
                 print("pub == ", pub)
+                print("RAW repr:", repr(pub))
                 pub_dt = parse_date_flexible(pub)
                 print("pub_dt == ", pub_dt)
                 # if pub_dt and from_dt <= pub_dt <= to_dt:
