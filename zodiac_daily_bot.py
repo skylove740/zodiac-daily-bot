@@ -16,7 +16,6 @@ from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip, Com
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from pytz import timezone
 from zoneinfo import ZoneInfo
 import feedparser
 import json
