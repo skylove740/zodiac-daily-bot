@@ -867,7 +867,7 @@ def create_news_shorts_video_with_bgvideo_fast(
 
 
 # ============================ 유튭 업로드 ===========================
-def upload_video_to_youtube_news(video_path, target_kr):
+def upload_video_to_youtube_news(video_path, target_kr, appendix=""):
     global timestamps
     creds = Credentials.from_authorized_user_file("token.json", YOUTUBE_SCOPES)
     youtube = build("youtube", "v3", credentials=creds)
@@ -875,11 +875,16 @@ def upload_video_to_youtube_news(video_path, target_kr):
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     date_str = now.strftime("%Y년 %m월 %d일")
 
+    if appendix != "":
+        contents_text = f"{date_str} 오늘의 "+target_kr+" 관련 뉴스 요약입니다.\n"+appendix+"\n\n#뉴스요약 #"+target_kr+" #"+target_kr+"뉴스 #오늘의"+target_kr+" #뉴스 #shorts"
+    else:
+        contents_text = f"{date_str} 오늘의 "+target_kr+" 관련 뉴스 요약입니다.\n\n#뉴스요약 #"+target_kr+" #"+target_kr+"뉴스 #오늘의"+target_kr+" #뉴스 #shorts"
+
     body = {
         "snippet": {
             "title": f"{date_str} "+target_kr+" 관련 뉴스",  # 영상 제목
             "description":
-            f"{date_str} 오늘의 "+target_kr+" 관련 뉴스 요약입니다.\n\n#뉴스요약 #"+target_kr+" #"+target_kr+"뉴스 #오늘의"+target_kr+" #뉴스 #shorts",
+            contents_text,
             "tags": ["뉴스", "뉴스요약", target_kr, target_kr+"뉴스", "오늘의"+target_kr, "shorts"],
             "categoryId": "25"  # News & Politics
         },
@@ -1976,39 +1981,69 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
 # -----------------------
 # 페이지(프레임) 생성 함수: 자산별 title + numbered items
 # -----------------------
-def build_pages_for_assets(assets_dict: Dict[str, List[Dict[str,Any]]], max_chars_per_frame=120) -> List[str]:
+def build_pages_for_assets(assets_dict: Dict[str, List[Dict[str, Any]]], 
+                           max_chars_per_frame=120) -> List[str]:
     """
-    Return list of 'page texts' in the order:
-      [ asset_title_1, asset1_item1_short, asset1_item2_short, ..., asset_title_2, asset2_item1_short, ... ]
-    Each entry is a single string that will be converted to an image/frame.
-    Splits long summaries into multiple frames by max_chars_per_frame.
+    assets_dict: {
+        "Stocks": [ {title, summary, impact_score}, ... ],
+        "Gold": [...],
+        ...
+    }
+
+    요구사항:
+      - 카테고리명을 한국어로 표시
+      - items가 하나도 없는 카테고리는 pages에 포함하지 않음
+      - 각 item summary는 max_chars_per_frame 기준으로 나눔
     """
+
+    # 영어 → 한국어 변환 테이블
+    korean_asset_names = {
+        "Stocks": "주식",
+        "Gold": "금",
+        "Crypto": "암호화폐",
+        "RealEstate": "부동산",
+        "Forex": "외환",
+        "Bonds": "채권",
+        "Commodities": "원자재",
+        "Other": "기타",
+    }
+
     pages = []
+
     for asset, items in assets_dict.items():
-        # asset title page
-        pages.append(asset)  # will be rendered as a title page
-        # numbered items
+
+        # 🔥 항목이 하나도 없으면 스킵 (제목조차 넣지 않음)
+        if not items or len(items) == 0:
+            continue
+
+        # 한국어 이름 매핑
+        asset_ko = korean_asset_names.get(asset, asset)
+
+        # 🔥 카테고리 제목 페이지 추가
+        pages.append(asset_ko)
+
+        # 🔥 아이템들 추가
         for i, it in enumerate(items, start=1):
-            # build "1) summary (score:xx)"
-            title = it.get("title") or ""
             summary = it.get("summary") or ""
             score = it.get("impact_score") or ""
             combined = f"{i}) {summary} (Impact: {score})"
-            # split combined if too long
+
+            # 1) 길지 않다면 그대로 추가
             if len(combined) <= max_chars_per_frame:
                 pages.append(combined)
             else:
-                # split into chunks at word boundaries
+                # 2) 길면 단어 단위로 나누기
                 words = combined.split()
                 chunk = ""
                 for w in words:
-                    if len(chunk) + 1 + len(w) <= max_chars_per_frame:
+                    if len(chunk) + len(w) + 1 <= max_chars_per_frame:
                         chunk = (chunk + " " + w).strip()
                     else:
                         pages.append(chunk)
                         chunk = w
                 if chunk:
                     pages.append(chunk)
+
     return pages
 
 # -----------------------
@@ -2025,6 +2060,9 @@ def build_and_save_shorts_video_from_pages(pages: List[str],
     이전 create_news_shorts_video_with_bgvideo_fast의 '배경 이어붙이기' 로직을 사용해
     영상으로 만드는 함수입니다. (인트로/아웃트로 이미지는 기존 것 사용)
     """
+
+    create_intro_image_news("investment-related news", "투자 관련 뉴스")
+
     # prepare intro/outro
     intro_img_path = OUTPUT_INTRO if os.path.exists(OUTPUT_INTRO) else os.path.join(bg_dir, "intro_bg_business.png")
     outro_img_path = OUTRO_BG if os.path.exists(OUTRO_BG) else os.path.join(bg_dir, "outro_bg.png")
@@ -2145,7 +2183,7 @@ def run_market_impact_pipeline():
     video_path = build_and_save_shorts_video_from_pages(pages, BG_DIR, OUT_DIR, bgm_file, out_filename, font_path=FONT_PATH)
 
     # 5) upload (reuse existing uploader, pass target string "시장요약")
-    upload_video_to_youtube_news(video_path, "투자관련뉴스")
+    upload_video_to_youtube_news(video_path, "투자관련뉴스", "48시간 내에 새로 발생한, 각 자산별 투자에 영향을 줄 만한 뉴스 요약 영상입니다.")
 
     print("[market pipeline] 완료: ", video_path)
 
