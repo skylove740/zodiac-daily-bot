@@ -1910,7 +1910,7 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
     """
 
     # asset categories 순서 (원하면 추가)
-    asset_categories = ["Stocks", "Gold", "Crypto", "RealEstate", "Forex", "Bonds", "Commodities", "Other"]
+    asset_categories = ["Stocks", "Gold", "Crypto", "RealEstate", "Forex", "Bonds", "Commodities", "Summary"]
 
     # Build prompt
     # 약식: 전달받은 기사 목록(제목+요약+url+source+published)을 넣고 -> 각 asset에 대해서
@@ -1931,7 +1931,8 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
         "  - rationale: 1-2 sentence justification why it affects that asset\n"
         "  - url: original url\n"
         "  - published: published datetime in ISO format\n\n"
-        "Return only valid JSON and nothing else. Use the following category order: " + ", ".join(asset_categories) + ".\n\n"
+        "Return only valid JSON and nothing else. Use the following category order: " + ", ".join(asset_categories) + ".\n"
+        "Summary category : Please summarize how each asset market will move in the future in one line for each asset.\n\n"
         "Articles (only those within last 48 hours):\n" + big_block + "\n\n"
         "Important: Keep the JSON compact but valid. If a category has no relevant articles, return an empty array for it.\n"
     )
@@ -2183,7 +2184,7 @@ def run_market_impact_pipeline():
     video_path = build_and_save_shorts_video_from_pages(pages, BG_DIR, OUT_DIR, bgm_file, out_filename, font_path=FONT_PATH)
 
     # 5) upload (reuse existing uploader, pass target string "시장요약")
-    upload_video_to_youtube_news(video_path, "투자관련뉴스", "48시간 내에 새로 발생한, 각 자산별 투자에 영향을 줄 만한 뉴스 요약 영상입니다.")
+    upload_video_to_youtube_news(video_path, "투자", "48시간 내에 새로 발생한, 각 자산별 투자에 영향을 줄 만한 뉴스 요약 영상입니다.")
 
     print("[market pipeline] 완료: ", video_path)
 
