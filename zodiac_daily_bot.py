@@ -1817,15 +1817,9 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
         # 가능한 조합: kr(ko), us(en), global/en 등 — 기존 환경에 맞게 호출
         try:
             us = fetch_newsdata_articles(q=None, country="us", language="en", category="business") or []
-            print("NewsData US articles fetched:", len(us))
-            print("us가 있음에도 아래에서 collected append가 안되고 있음, us- :")
-            print(us)
             for a in us:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
-                print("pub == ", pub)
-                print("RAW repr:", repr(pub))
                 pub_dt = parse_date_flexible(pub)
-                print("pub_dt == ", pub_dt)
                 # if pub_dt and from_dt <= pub_dt <= to_dt:
                 collected.append({
                     "title": a.get("title"),
@@ -1839,9 +1833,6 @@ def collect_recent_articles(from_dt: datetime, to_dt: datetime) -> List[Dict[str
 
         try:
             kr = fetch_newsdata_articles(q=None, country="kr", language="ko", category="business") or []
-            print("NewsData KR articles fetched:", len(kr))
-            print("kr가 있음에도 아래에서 collected append가 안되고 있음, kr- :")
-            print(kr)
             for a in kr:
                 pub = a.get("pubDate") or a.get("published_at") or a.get("date")
                 print("pub == ", pub)
@@ -1948,7 +1939,6 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
             temperature=0
         )
         raw = response.choices[0].message.content.strip()
-        print(">>>>>>>> GPT raw response:\n", raw[:1000])
     except Exception as e:
         print("GPT call error:", e)
         return {}
@@ -2006,7 +1996,7 @@ def build_pages_for_assets(assets_dict: Dict[str, List[Dict[str, Any]]],
         "Forex": "외환",
         "Bonds": "채권",
         "Commodities": "원자재",
-        "Other": "기타",
+        "Summary": "전체 요약",
     }
 
     pages = []
