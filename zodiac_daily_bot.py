@@ -1962,7 +1962,6 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
             else:
                 items = []
             normalized[cat] = items
-        print(">>>>>>>> GPT parsed and normalized JSON:\n",normalized)
         return normalized
     except Exception as e:
         print("JSON parse failed:", e)
@@ -1972,22 +1971,11 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
 # -----------------------
 # 페이지(프레임) 생성 함수: 자산별 title + numbered items
 # -----------------------
-def build_pages_for_assets(assets_dict: Dict[str, List[Dict[str, Any]]], 
-                           max_chars_per_frame=120) -> List[str]:
-    """
-    assets_dict: {
-        "Stocks": [ {title, summary, impact_score}, ... ],
-        "Gold": [...],
-        ...
-    }
+def build_pages_for_assets(
+    assets_dict: Dict[str, Any],
+    max_chars_per_frame=120
+) -> List[str]:
 
-    요구사항:
-      - 카테고리명을 한국어로 표시
-      - items가 하나도 없는 카테고리는 pages에 포함하지 않음
-      - 각 item summary는 max_chars_per_frame 기준으로 나눔
-    """
-
-    # 영어 → 한국어 변환 테이블
     korean_asset_names = {
         "Stocks": "주식",
         "Gold": "금",
@@ -2003,37 +1991,49 @@ def build_pages_for_assets(assets_dict: Dict[str, List[Dict[str, Any]]],
 
     for asset, items in assets_dict.items():
 
-        # 🔥 항목이 하나도 없으면 스킵 (제목조차 넣지 않음)
-        if not items or len(items) == 0:
+        if not items:
             continue
 
-        # 한국어 이름 매핑
         asset_ko = korean_asset_names.get(asset, asset)
 
-        # 🔥 카테고리 제목 페이지 추가
-        pages.append(asset_ko)
+        # 🔥 case 1: items가 문자열인 경우
+        if isinstance(items, str):
+            pages.append(asset_ko)
+            pages.append(items)
+            continue
 
-        # 🔥 아이템들 추가
-        for i, it in enumerate(items, start=1):
-            summary = it.get("summary") or ""
-            score = it.get("impact_score") or ""
-            combined = f"{i}) {summary} (Impact: {score})"
+        # 🔥 case 2: items가 리스트지만 내부가 문자열
+        if isinstance(items, list) and all(isinstance(x, str) for x in items):
+            pages.append(asset_ko)
+            for i, txt in enumerate(items, start=1):
+                pages.append(f"{i}) {txt}")
+            continue
 
-            # 1) 길지 않다면 그대로 추가
-            if len(combined) <= max_chars_per_frame:
-                pages.append(combined)
-            else:
-                # 2) 길면 단어 단위로 나누기
-                words = combined.split()
-                chunk = ""
-                for w in words:
-                    if len(chunk) + len(w) + 1 <= max_chars_per_frame:
-                        chunk = (chunk + " " + w).strip()
-                    else:
+        # 🔥 case 3: 정상적인 dict 리스트
+        if isinstance(items, list):
+            pages.append(asset_ko)
+            for i, it in enumerate(items, start=1):
+
+                if not isinstance(it, dict):
+                    continue  # 이상한 데이터 방어
+
+                summary = it.get("summary") or it.get("text") or ""
+                score = it.get("impact_score") or ""
+                combined = f"{i}) {summary} (Impact: {score})"
+
+                if len(combined) <= max_chars_per_frame:
+                    pages.append(combined)
+                else:
+                    words = combined.split()
+                    chunk = ""
+                    for w in words:
+                        if len(chunk) + len(w) + 1 <= max_chars_per_frame:
+                            chunk = (chunk + " " + w).strip()
+                        else:
+                            pages.append(chunk)
+                            chunk = w
+                    if chunk:
                         pages.append(chunk)
-                        chunk = w
-                if chunk:
-                    pages.append(chunk)
 
     return pages
 
