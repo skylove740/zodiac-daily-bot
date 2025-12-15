@@ -1914,7 +1914,7 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
     prompt = (
         "Please answer everything in Korean.\n"
         "You are an expert market analyst. Based on the following collection of news articles (titles, short content, urls and published times),\n"
-        "identify which articles within the given 48-hour window are likely to have meaningful impact on specific asset markets (Stocks, Gold, Crypto, RealEstate, Forex, Bonds, Commodities, Other).\n"
+        "identify which articles within the given 48-hour window are likely to have meaningful impact on specific asset markets (Stocks, Gold, Crypto, RealEstate, Forex, Bonds, Commodities, Summary).\n"
         "For each asset category, please produce a JSON object mapping the category name to an array of objects. Each object must include:\n"
         "  - title: a short title (from the article)\n"
         "  - summary: a concise summary focusing on how it affects that asset (max ~250 chars)\n"
@@ -2019,7 +2019,7 @@ def build_pages_for_assets(
 
                 summary = it.get("summary") or it.get("text") or ""
                 score = it.get("impact_score") or ""
-                combined = f"{i}) {summary} (Impact: {score})"
+                combined = f"{i}) {summary} (예상 효과 점수: {score})"
 
                 if len(combined) <= max_chars_per_frame:
                     pages.append(combined)
@@ -2052,7 +2052,7 @@ def build_and_save_shorts_video_from_pages(pages: List[str],
     영상으로 만드는 함수입니다. (인트로/아웃트로 이미지는 기존 것 사용)
     """
 
-    create_intro_image_news("investment-related news", "투자 관련 뉴스")
+    create_intro_image_news("investment-related", "투자")
 
     # prepare intro/outro
     intro_img_path = OUTPUT_INTRO if os.path.exists(OUTPUT_INTRO) else os.path.join(bg_dir, "intro_bg_business.png")
