@@ -1897,7 +1897,7 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
     """
     articles: list of {title, content, url, source, published}
     반환: dict mapping asset category -> list of items:
-      { "stocks": [ {title, summary, impact_score, rationale, url, published}, ... ], "crypto": [...], ... }
+      { "stocks": [ {title, summary, rationale, url, published}, ... ], "crypto": [...], ... }
     """
 
     # asset categories 순서 (원하면 추가)
@@ -1918,12 +1918,13 @@ def ask_gpt_market_impact(articles: List[Dict[str,Any]], from_dt: datetime, to_d
         "For each asset category, please produce a JSON object mapping the category name to an array of objects. Each object must include:\n"
         "  - title: a short title (from the article)\n"
         "  - summary: a concise summary focusing on how it affects that asset (max ~250 chars)\n"
-        "  - impact_score: integer 0-100 estimating the magnitude of impact on that asset\n"
+        # "  - impact_score: integer 0-100 estimating the magnitude of impact on that asset\n"
         "  - rationale: 1-2 sentence justification why it affects that asset\n"
         "  - url: original url\n"
         "  - published: published datetime in ISO format\n\n"
         "Return only valid JSON and nothing else. Use the following category order: " + ", ".join(asset_categories) + ".\n"
         "Summary category : Please summarize how each asset market will move in the future in one line for each asset.\n\n"
+        "In the case of a summary, please briefly indicate what assets are in the front. ex. Real Estate: Strong outlook for ~reason."
         "Articles (only those within last 48 hours):\n" + big_block + "\n\n"
         "Important: Keep the JSON compact but valid. If a category has no relevant articles, return an empty array for it.\n"
     )
@@ -2018,8 +2019,8 @@ def build_pages_for_assets(
                     continue  # 이상한 데이터 방어
 
                 summary = it.get("summary") or it.get("text") or ""
-                score = it.get("impact_score") or ""
-                combined = f"{i}) {summary} (예상 효과 점수: {score})"
+                # score = it.get("impact_score") or ""
+                combined = f"{i}) {summary}"
 
                 if len(combined) <= max_chars_per_frame:
                     pages.append(combined)
